@@ -9,19 +9,29 @@ public class PortChat
 {
     static bool _continue;
     static SerialPort _serialPort;
+    static string _defaultPortName;
 
+    /// <summary>
+    /// 
+    /// </summary>
     public static void Main()
     {
-        string name;
         string message;
+        Byte[] message_airspeed_demo = { 0x02, 0x20, 0x00, 0x00, 0x1D, 0x80, 0x42, 0x03 };
         StringComparer stringComparer = StringComparer.OrdinalIgnoreCase;
         Thread readThread = new Thread(Read);
 
         // Create a new SerialPort object with default settings.
         _serialPort = new SerialPort();
+        _defaultPortName = _serialPort.PortName;
+        
+        string[] ports = SerialPort.GetPortNames();
+        if (ports.Length > 0) {
+            _defaultPortName = ports[0];
+        }
 
         // Allow the user to set the appropriate properties.
-        _serialPort.PortName = SetPortName(_serialPort.PortName);
+        _serialPort.PortName = SetPortName(_defaultPortName);
         _serialPort.BaudRate = SetPortBaudRate(_serialPort.BaudRate);
         _serialPort.Parity = SetPortParity(_serialPort.Parity);
         _serialPort.DataBits = SetPortDataBits(_serialPort.DataBits);
@@ -36,10 +46,7 @@ public class PortChat
         _continue = true;
         readThread.Start();
 
-        Console.Write("Name: ");
-        name = Console.ReadLine();
-
-        Console.WriteLine("Type QUIT to exit");
+        Console.WriteLine("Type QUIT to exit and press ENTER to send Airspeed-Demo message");
 
         while (_continue)
         {
@@ -51,8 +58,8 @@ public class PortChat
             }
             else
             {
-                _serialPort.WriteLine(
-                    String.Format("<{0}>: {1}", name, message));
+                _serialPort.Write(message_airspeed_demo, 0, 8);
+                Console.WriteLine("Message sent:  { 0x02, 0x20, 0x00, 0x00, 0x1D, 0x80, 0x42, 0x03 }");
             }
         }
 
@@ -67,7 +74,7 @@ public class PortChat
             try
             {
                 string message = _serialPort.ReadLine();
-                Console.WriteLine(message);
+                // Console.WriteLine(message);
             }
             catch (TimeoutException) { }
         }

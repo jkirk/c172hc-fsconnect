@@ -16,9 +16,6 @@ public class PortChat
     /// </summary>
     public static void Main()
     {
-        string message;
-        Byte[] message_airspeed_demo = { 0x02, 0x20, 0x00, 0x00, 0x1D, 0x80, 0x42, 0x03 };
-        StringComparer stringComparer = StringComparer.OrdinalIgnoreCase;
         Thread readThread = new Thread(Read);
 
         // Create a new SerialPort object with default settings.
@@ -28,8 +25,55 @@ public class PortChat
         string[] ports = SerialPort.GetPortNames();
         if (ports.Length > 0) {
             _defaultPortName = ports[0];
+            _serialPort.PortName = _defaultPortName;
+        }
+        // Set the read/write timeouts
+        _serialPort.ReadTimeout = 500;
+        _serialPort.WriteTimeout = 500;
+        
+        readThread.Start();
+
+        bool showMenu = true;
+        while (showMenu)
+        {
+            showMenu = MainMenu();
         }
 
+        readThread.Join();
+        _serialPort.Close();
+    }
+
+    private static bool MainMenu()
+    {
+        Console.Clear();
+        Console.WriteLine("Welcome to c172hc-fsconnect SerialPortTest!\n");
+        Console.WriteLine("1) Configure Serial Port");
+        Console.WriteLine("2) Send Airspeed Demo Message");
+        Console.WriteLine("3) Send start to target value in time interval");
+        Console.WriteLine("4) Exit");
+
+        Console.Write("\nSelect an option: ");
+
+        switch (Console.ReadLine())
+        {
+            case "1":
+                ConfigureSerialPort();
+                return true;
+            case "2":
+                AirspeedDemoMessage();
+                return true;
+            case "3":
+                return false;
+            case "4":
+                return false;
+            default:
+                return true;
+        }
+    }
+
+    private static void ConfigureSerialPort()
+    {
+        _serialPort.Close();
         // Allow the user to set the appropriate properties.
         _serialPort.PortName = SetPortName(_defaultPortName);
         _serialPort.BaudRate = SetPortBaudRate(_serialPort.BaudRate);
@@ -37,17 +81,17 @@ public class PortChat
         _serialPort.DataBits = SetPortDataBits(_serialPort.DataBits);
         _serialPort.StopBits = SetPortStopBits(_serialPort.StopBits);
         _serialPort.Handshake = SetPortHandshake(_serialPort.Handshake);
+    }
 
-        // Set the read/write timeouts
-        _serialPort.ReadTimeout = 500;
-        _serialPort.WriteTimeout = 500;
+    private static void AirspeedDemoMessage()
+    {
+        string message;
+        Byte[] message_airspeed_demo = { 0x02, 0x20, 0x00, 0x00, 0x1D, 0x80, 0x42, 0x03 };
+        StringComparer stringComparer = StringComparer.OrdinalIgnoreCase;
+        Console.WriteLine("Type QUIT to exit and press ENTER to send Airspeed-Demo message");
 
         _serialPort.Open();
         _continue = true;
-        readThread.Start();
-
-        Console.WriteLine("Type QUIT to exit and press ENTER to send Airspeed-Demo message");
-
         while (_continue)
         {
             message = Console.ReadLine();
@@ -62,8 +106,6 @@ public class PortChat
                 Console.WriteLine("Message sent:  { 0x02, 0x20, 0x00, 0x00, 0x1D, 0x80, 0x42, 0x03 }");
             }
         }
-
-        readThread.Join();
         _serialPort.Close();
     }
 

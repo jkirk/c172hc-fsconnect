@@ -63,7 +63,8 @@ public class PortChat
                 AirspeedDemoMessage();
                 return true;
             case "3":
-                return false;
+                StartToTargetValue();
+                return true;
             case "4":
                 return false;
             default:
@@ -107,6 +108,72 @@ public class PortChat
             }
         }
         _serialPort.Close();
+    }
+
+    private static void StartToTargetValue()
+    {
+        int start_value = 0;
+        int target_value = 0;
+        int target_time_interval = 0;
+        float message_interval = 0.05F;  // 50ms
+        string message;
+        Byte[] message_airspeed_demo = { 0x02, 0x20, 0x00, 0x00, 0x1D, 0x80, 0x42, 0x03 };
+        StringComparer stringComparer = StringComparer.OrdinalIgnoreCase;
+
+        bool valid_input = false;
+        string input;
+        while (!valid_input)
+        {
+            Console.Write("Start value (default: 0): ");
+            input = Console.ReadLine();
+            if (input == "")
+            {
+                valid_input = true;
+            } 
+            else
+            {
+                valid_input = int.TryParse(input, out start_value);
+                if (!valid_input)
+                {
+                    Console.WriteLine("Given start value is invalid!");
+                }
+            }
+        }
+        
+        valid_input = false;
+        while (!valid_input)
+        {
+            Console.Write("Target value: ");
+            input = Console.ReadLine();
+            valid_input = int.TryParse(input, out target_value);
+            if (!valid_input)
+            {
+                Console.WriteLine("Given target value is invalid!");
+            }
+            else if (target_value == start_value)
+            {
+                valid_input = false;
+                Console.WriteLine("Start value and target value can not be the same value!");
+            }
+        }
+
+        valid_input = false;
+        while (!valid_input)
+        {
+            Console.Write("Target time interval: ");
+            input = Console.ReadLine();
+            valid_input = int.TryParse(input, out target_time_interval);
+            if (target_time_interval < 1)
+            {
+                valid_input = false;
+                Console.WriteLine("Target time interval needs to be greater 0!");
+            }
+        }
+
+        Console.WriteLine("start_value: {0}", start_value);
+        Console.WriteLine("target_value: {0}", target_value);
+        Console.WriteLine("target_time_interval: {0}", target_time_interval);
+        Console.ReadLine();
     }
 
     public static void Read()

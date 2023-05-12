@@ -6,14 +6,14 @@ using System.IO.Ports;
 using System.Linq;
 using System.Threading;
 
-public class PortChat
+public class SerialPortTest
 {
     static bool _continue;
     static SerialPort _serialPort;
     static string _defaultPortName;
 
     /// <summary>
-    /// 
+    /// Initializes a SerialPort object, exit the application if no serial port is found and displays a menu to the user until the program is exited.
     /// </summary>
     public static void Main()
     {
@@ -21,12 +21,24 @@ public class PortChat
 
         // Create a new SerialPort object with default settings.
         _serialPort = new SerialPort();
-        _defaultPortName = _serialPort.PortName;
-        
+
+        // Get serial ports and use the last one found by default
+        // and exit the application if none are detected.
         string[] ports = SerialPort.GetPortNames();
-        if (ports.Length > 0) {
-            _defaultPortName = ports[0];
+        if (ports.Length > 0)
+        {
+            _defaultPortName = ports[ports.Length - 1];
             _serialPort.PortName = _defaultPortName;
+        }
+        else
+        {
+            Console.WriteLine("Welcome to c172hc-fsconnect SerialPortTest!");
+            Console.WriteLine();
+            Console.WriteLine("ERROR: Sorry, no COM ports found!");
+            Console.WriteLine();
+            Console.WriteLine("Please press ENTER to exit the application!");
+            _ = Console.ReadLine();
+            return;
         }
         // Set the read/write timeouts
         _serialPort.ReadTimeout = 500;
@@ -47,7 +59,10 @@ public class PortChat
     private static bool MainMenu()
     {
         Console.Clear();
-        Console.WriteLine("Welcome to c172hc-fsconnect SerialPortTest!\n");
+        Console.WriteLine("Welcome to c172hc-fsconnect SerialPortTest!");
+        Console.WriteLine();
+        Console.WriteLine("Current serial port settings: {0} ({1},{2},{3},{4},{5})", _serialPort.PortName, _serialPort.BaudRate, _serialPort.DataBits, _serialPort.Parity, _serialPort.StopBits, _serialPort.Handshake);
+        Console.WriteLine();
         Console.WriteLine("1) Configure Serial Port");
         Console.WriteLine("2) Send Airspeed Demo Message");
         Console.WriteLine("3) Send start to target value in time interval");
@@ -79,8 +94,8 @@ public class PortChat
         // Allow the user to set the appropriate properties.
         _serialPort.PortName = SetPortName(_defaultPortName);
         _serialPort.BaudRate = SetPortBaudRate(_serialPort.BaudRate);
-        _serialPort.Parity = SetPortParity(_serialPort.Parity);
         _serialPort.DataBits = SetPortDataBits(_serialPort.DataBits);
+        _serialPort.Parity = SetPortParity(_serialPort.Parity);
         _serialPort.StopBits = SetPortStopBits(_serialPort.StopBits);
         _serialPort.Handshake = SetPortHandshake(_serialPort.Handshake);
     }

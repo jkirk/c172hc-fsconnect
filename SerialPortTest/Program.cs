@@ -43,7 +43,7 @@ public class SerialPortTest
         // Set the read/write timeouts
         _serialPort.ReadTimeout = 500;
         _serialPort.WriteTimeout = 500;
-        
+
         readThread.Start();
 
         bool showMenu = true;
@@ -56,6 +56,9 @@ public class SerialPortTest
         _serialPort.Close();
     }
 
+    /// <summary>
+    /// Show main menu
+    /// </summary>
     private static bool MainMenu()
     {
         Console.Clear();
@@ -64,11 +67,13 @@ public class SerialPortTest
         Console.WriteLine("Current serial port settings: {0} ({1},{2},{3},{4},{5})", _serialPort.PortName, _serialPort.BaudRate, _serialPort.DataBits, _serialPort.Parity, _serialPort.StopBits, _serialPort.Handshake);
         Console.WriteLine();
         Console.WriteLine("1) Configure Serial Port");
-        Console.WriteLine("2) Send Airspeed Demo Message");
-        Console.WriteLine("3) Send start to target value in time interval");
-        Console.WriteLine("4) Exit");
-
-        Console.Write("\nSelect an option: ");
+        Console.WriteLine("2) Send Airspeed Demo Message (hardcoded checksum)");
+        Console.WriteLine("3) Send Airspeed Demo Message (calculated checksum)");
+        Console.WriteLine("4) Send start to target value in time interval");
+        Console.WriteLine();
+        Console.WriteLine("q) Quit");
+        Console.WriteLine();
+        Console.Write("Select an option: ");
 
         switch (Console.ReadLine())
         {
@@ -76,18 +81,24 @@ public class SerialPortTest
                 ConfigureSerialPort();
                 return true;
             case "2":
-                AirspeedDemoMessage();
+                AirspeedDemoMessageHardcoded();
                 return true;
             case "3":
-                StartToTargetValue();
+                AirspeedDemoMessageCalculated();
                 return true;
             case "4":
+                StartToTargetValue();
+                return true;
+            case "q":
                 return false;
             default:
                 return true;
         }
     }
 
+    /// <summary>
+    /// Let the user set serial port settings
+    /// </summary>
     private static void ConfigureSerialPort()
     {
         _serialPort.Close();
@@ -100,40 +111,94 @@ public class SerialPortTest
         _serialPort.Handshake = SetPortHandshake(_serialPort.Handshake);
     }
 
-    private static void AirspeedDemoMessage()
+    /// <summary>
+    /// Sends the Airspeed-Demo message to the serial port.
+    /// The message consists of a start-of-text (STX) byte, a gauge code byte, a value byte array of length 4, a checksum byte, and an end-of-text (ETX) byte.
+    /// The checksum was calculated manually.
+    /// The message is sent to the serial port when the user presses ENTER.
+    /// </summary>
+    private static void AirspeedDemoMessageHardcoded()
     {
-        string message;
-        Byte[] message_airspeed_demo = { 0x02, 0x20, 0x00, 0x00, 0x1D, 0x80, 0x42, 0x03 };
-        StringComparer stringComparer = StringComparer.OrdinalIgnoreCase;
-        Console.WriteLine("Type QUIT to exit and press ENTER to send Airspeed-Demo message");
+        Byte[] message_airspeed_demo = { 0x02, 0x20, 0x00, 0x00, 0x1D, 0x80, 0x43, 0x03 };
 
         _serialPort.Open();
         _continue = true;
         while (_continue)
         {
-            message = Console.ReadLine();
-
-            if (stringComparer.Equals("quit", message))
+            Console.WriteLine("Press ENTER to send Airspeed-Demo message or press q to quit.");
+            switch (Console.ReadLine())
             {
-                _continue = false;
-            }
-            else
-            {
-                _serialPort.Write(message_airspeed_demo, 0, 8);
-                Console.WriteLine("Message sent:  { 0x02, 0x20, 0x00, 0x00, 0x1D, 0x80, 0x42, 0x03 }");
+                case "q":
+                    _continue = false;
+                    break;
+                default:
+                    _serialPort.Write(message_airspeed_demo, 0, message_airspeed_demo.Length);
+                    PrintMessage(message_airspeed_demo);
+                    break;
             }
         }
         _serialPort.Close();
     }
 
+    /// <summary>
+    /// Calculates and sends an Airspeed-Demo message to the serial port.
+    /// The message consists of a start-of-text (STX) byte, a gauge code byte, a value byte array of length 4, a checksum byte, and an end-of-text (ETX) byte.
+    /// The checksum is calculated based on the gauge code byte and the value byte array, using the CalculateChecksum() method.
+    /// The message is sent to the serial port when the user presses ENTER.
+    /// </summary>
+    private static void AirspeedDemoMessageCalculated()
+    {
+        const byte message_stx = 0x02;
+        byte[] message_gauge_code = new byte[1] { 0x20 };
+        byte[] message_value = new byte[4] { 0x00, 0x00, 0x1D, 0x80 };
+        byte message_checksum = CalculateChecksum(message_gauge_code.Concat(message_value).ToArray());
+        const byte message_etx = 0x03;
+        byte[] msg = { message_stx, message_gauge_code[0], message_value[0], message_value[1], message_value[2], message_value[3], message_checksum, message_etx };
+
+        _serialPort.Open();
+        _continue = true;
+        while (_continue)
+        {
+            Console.WriteLine("Press ENTER to send Airspeed-Demo message or press q to quit.");
+            switch (Console.ReadLine())
+            {
+                case "q":
+                    _continue = false;
+                    break;
+                default:
+                    _serialPort.Write(msg, 0, msg.Length);
+                    PrintMessage(msg);
+                    break;
+            }
+        }
+        _serialPort.Close();
+    }
+
+    /// <summary>
+    /// Prints a message to the console indicating that a message has been sent,
+    /// along with the contents of the message in hexadecimal format.
+    /// </summary>
+    /// <param name="msg">The byte array containing the message to print.</param>
+    private static void PrintMessage(byte[] msg)
+    {
+        Console.Write("Message sent: ");
+        string message = string.Join(", ", msg.Select(b => $"0x{b:X2}"));
+        Console.WriteLine(message);
+    }
+
+    /// <summary>
+    /// Calculates the checksum of a byte array.
+    /// </summary>
+    /// <param name="msg">The byte array to calculate the checksum for.</param>
+    /// <returns>The calculated checksum.</returns>
     private static byte CalculateChecksum(byte[] msg)
     {
-        byte checksum = 0xFF;
+        byte sum = 0;
         for (int i = 0; i < msg.Length; i++)
         {
-            checksum ^= msg[i]; // XOR
+            sum += msg[i];
         }
-        return checksum;
+        return (byte)(~sum + 1);
     }
 
     private static void StartToTargetValue()

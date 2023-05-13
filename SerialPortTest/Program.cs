@@ -32,7 +32,9 @@ public class SerialPortTest
         }
         else
         {
+            Console.Clear();
             Console.WriteLine("Welcome to c172hc-fsconnect SerialPortTest!");
+            Console.WriteLine("-------------------------------------------");
             Console.WriteLine();
             Console.WriteLine("ERROR: Sorry, no COM ports found!");
             Console.WriteLine();
@@ -63,13 +65,15 @@ public class SerialPortTest
     {
         Console.Clear();
         Console.WriteLine("Welcome to c172hc-fsconnect SerialPortTest!");
+        Console.WriteLine("-------------------------------------------");
         Console.WriteLine();
         Console.WriteLine("Current serial port settings: {0} ({1},{2},{3},{4},{5})", _serialPort.PortName, _serialPort.BaudRate, _serialPort.DataBits, _serialPort.Parity, _serialPort.StopBits, _serialPort.Handshake);
         Console.WriteLine();
         Console.WriteLine("1) Configure Serial Port");
         Console.WriteLine("2) Send Airspeed Demo Message (hardcoded checksum)");
         Console.WriteLine("3) Send Airspeed Demo Message (calculated checksum)");
-        Console.WriteLine("4) Send start to target value in time interval");
+        Console.WriteLine("4) Send (single) Message (Gauge Type, Gauge Value)");
+        Console.WriteLine("5) Send start to target value in time interval");
         Console.WriteLine();
         Console.WriteLine("q) Quit");
         Console.WriteLine();
@@ -87,6 +91,9 @@ public class SerialPortTest
                 AirspeedDemoMessageCalculated();
                 return true;
             case "4":
+                SendMessage();
+                return true;
+            case "5":
                 StartToTargetValue();
                 return true;
             case "q":
@@ -114,7 +121,7 @@ public class SerialPortTest
     /// <summary>
     /// Sends the Airspeed-Demo message to the serial port.
     /// The message consists of a start-of-text (STX) byte, a gauge code byte, a value byte array of length 4, a checksum byte, and an end-of-text (ETX) byte.
-    /// The checksum was calculated manually.
+    /// The checksum is hard-coded.
     /// The message is sent to the serial port when the user presses ENTER.
     /// </summary>
     private static void AirspeedDemoMessageHardcoded()
@@ -141,9 +148,9 @@ public class SerialPortTest
     }
 
     /// <summary>
-    /// Calculates and sends an Airspeed-Demo message to the serial port.
+    /// Sends an Airspeed-Demo message to the serial port.
     /// The message consists of a start-of-text (STX) byte, a gauge code byte, a value byte array of length 4, a checksum byte, and an end-of-text (ETX) byte.
-    /// The checksum is calculated based on the gauge code byte and the value byte array, using the CalculateChecksum() method.
+    /// The checksum is calculated based on the gauge code byte and the value byte array using the CalculateChecksum() method.
     /// The message is sent to the serial port when the user presses ENTER.
     /// </summary>
     private static void AirspeedDemoMessageCalculated()
@@ -199,6 +206,113 @@ public class SerialPortTest
             sum += msg[i];
         }
         return (byte)(~sum + 1);
+    }
+
+    /// <summary>
+    /// Reads a gauge code from the console input, which is a byte value between 0 and 255.
+    /// If the input is empty, a default value of 32 (0x20) is used.
+    /// </summary>
+    /// <returns>A byte array containing the gauge code.</returns>
+    private static byte[] ReadGaugeCode()
+    {
+        byte[] message_gauge_code = new byte[1] { 0x20 };
+        bool valid_input = false;
+        UInt32 input_value = 0;
+
+        while (!valid_input)
+        {
+            Console.Write("Gauge Code (default: 32 (0x20)): ");
+            string input = Console.ReadLine();
+            if (input == "")
+            {
+                valid_input = true;
+            }
+            else
+            {
+                valid_input = UInt32.TryParse(input, out input_value);
+                valid_input = (valid_input && input_value >= 0 && input_value <= 255);
+
+                if (valid_input)
+                {
+                    message_gauge_code = BitConverter.GetBytes(input_value);
+                }
+                else
+                {
+                    Console.WriteLine("ERROR: Gauge Code must be numeric and between 0 and 255");
+                }
+            }
+        }
+        return message_gauge_code;
+    }
+
+    /// <summary>
+    /// Reads a gauge value from the console input, which is a byte value between 0 and UInt32.MaxValue.
+    /// If the input is empty, a default value of 0 is used.
+    /// </summary>
+    /// <returns>A byte array containing the gauge value.</returns>
+    private static byte[] ReadGaugeValue()
+    {
+        byte[] message_gauge_value = new byte[4];
+        bool valid_input = false;
+        UInt32 input_value = 0;
+
+        while (!valid_input)
+        {
+            Console.Write("Gauge Value (default: 0): ");
+            string input = Console.ReadLine();
+            if (input == "")
+            {
+                valid_input = true;
+            }
+            else
+            {
+                valid_input = UInt32.TryParse(input, out input_value);
+                valid_input = (valid_input && input_value >= 0 && input_value <= UInt32.MaxValue);
+
+                if (valid_input)
+                {
+                    message_gauge_value[0] = (byte)(input_value >> 24);
+                    message_gauge_value[1] = (byte)(input_value >> 16);
+                    message_gauge_value[2] = (byte)(input_value >> 8);
+                    message_gauge_value[3] = (byte)input_value;
+                }
+                else
+                {
+                    Console.WriteLine("ERROR: Gauge Value must be numeric and between 0 and {0}", UInt32.MaxValue);
+                }
+            }
+        }
+        return message_gauge_value;
+    }
+
+    /// <summary>
+    /// Asks the user for Gauge Code + Gauge Vaule and sends a message to the serial port.
+    /// The message consists of a start-of-text (STX) byte, a gauge code byte, a value byte array of length 4, a checksum byte, and an end-of-text (ETX) byte.
+    /// The checksum is calculated based on the gauge code byte and the value byte array using the CalculateChecksum() method.
+    /// </summary>
+    private static void SendMessage()
+    {
+        Console.Clear();
+        Console.WriteLine("Send Message (Gauge Code, Gauge Value)");
+        Console.WriteLine("--------------------------------------");
+        Console.WriteLine();
+        Console.WriteLine("Please enter values in decimal numeral system.");
+        Console.WriteLine();
+
+        byte[] message_gauge_code = ReadGaugeCode();
+        byte[] message_gauge_value = ReadGaugeValue();
+
+        const byte message_stx = 0x02;
+        byte message_checksum = CalculateChecksum(message_gauge_code.Concat(message_gauge_value).ToArray());
+        const byte message_etx = 0x03;
+        byte[] msg = { message_stx, message_gauge_code[0], message_gauge_value[0], message_gauge_value[1], message_gauge_value[2], message_gauge_value[3], message_checksum, message_etx };
+
+        _serialPort.Open();
+        _serialPort.Write(msg, 0, msg.Length);
+        PrintMessage(msg);
+        _serialPort.Close();
+        Console.Write("Press ENTER to return to main menu! ");
+        _ = Console.ReadLine();
     }
 
     private static void StartToTargetValue()

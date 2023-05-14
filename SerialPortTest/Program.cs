@@ -5,7 +5,9 @@ using System;
 using System.IO.Ports;
 using System.Linq;
 using System.Net.NetworkInformation;
+using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 public class SerialPortTest
 {
@@ -75,7 +77,8 @@ public class SerialPortTest
         Console.WriteLine("3) Send Airspeed Demo Message (calculated checksum)");
         Console.WriteLine("4) Send (single) Message (Gauge Type, Gauge Value)");
         Console.WriteLine("5) Send (multiple) Messages (Gauge Type, Gauge Value)");
-        Console.WriteLine("6) Send start to target value in time interval");
+        Console.WriteLine("6) Send start to target messages within given time interval");
+        Console.WriteLine("7) Generate + send messages from start to target value with custom step + message interval");
         Console.WriteLine();
         Console.WriteLine("q) Quit");
         Console.WriteLine();
@@ -100,6 +103,9 @@ public class SerialPortTest
                 return true;
             case "6":
                 StartToTargetValue();
+                return true;
+            case "7":
+                StartToTargetMessageInterval();
                 return true;
             case "q":
                 return false;
@@ -251,7 +257,7 @@ public class SerialPortTest
             string input = Console.ReadLine();
             if (input == "")
             {
-                input_value = 0;
+                input_value = default_value;
                 valid_input = true;
             }
             else
@@ -359,8 +365,7 @@ public class SerialPortTest
     /// </summary>
     private static void SendMessages()
     {
-        
-        bool _continue = true;
+        bool continue_send_messages = true;
 
         Console.Clear();
         Console.WriteLine("Send (multiple) Messages (Gauge Code, Gauge Value)");
@@ -370,7 +375,8 @@ public class SerialPortTest
         Console.WriteLine();
 
         _serialPort.Open();
-        while (_continue)
+        _continue = true;
+        while (continue_send_messages)
         {
             byte[] msg = GenerateMessage(ValueToGaugeCode(ReadGaugeCode()), ValueToGaugeValue(ReadGaugeValue()));
 
@@ -381,22 +387,23 @@ public class SerialPortTest
             switch (Console.ReadLine())
             {
                 case "q":
+                    continue_send_messages = false;
                     _continue = false;
                     break;
                 default:
                     break;
             }
-            
         }
         _serialPort.Close();
     }
 
     private static void StartToTargetValue()
     {
+        byte[] message_gauge_code = { 0x20 };
         UInt32 start_value = 0;
         UInt32 target_value = 0;
         int target_time_interval = 0;
-        float message_interval = 0.05F;  // 50ms
+        const int message_interval = 50;
         string message;
 
         start_value = ReadValue("Start value");
@@ -407,43 +414,27 @@ public class SerialPortTest
         _continue = true;
         while (_continue)
         {
-            Int32 step_value = Convert.ToInt32(Math.Ceiling((target_value - start_value) / target_time_interval * message_interval + 0.5));
+            Int32 step_value = Convert.ToInt32(Math.Ceiling((target_value - start_value) / target_time_interval * message_interval / 1000 + 0.5));
             Console.WriteLine("step_value: {0}", step_value);
 
             if (step_value < 0)
             {
                 for (UInt32 value = start_value; value >= target_value; value += (UInt32)step_value)
                 {
-                    byte[] message_gauge_stx = { 0x02 };
-                    byte[] message_gauge_code = { 0x20 };
-                    byte[] message_value = new byte[5];
-                    Buffer.BlockCopy(message_gauge_code, 0, message_value, 0, 1);
-                    Buffer.BlockCopy(BitConverter.GetBytes(value), 0, message_value, 1, 4);
-                    byte message_checksum = CalculateChecksum(message_value);
-                    byte[] msg = { 0x02, message_value[0], message_value[1], message_value[2], message_value[3], message_value[4], message_value[5], message_checksum, 0x03 };
-
+                    byte[] msg = GenerateMessage(message_gauge_code, ValueToGaugeValue(value));
                     _serialPort.Write(msg, 0, 8);
-                    // Console.WriteLine("value sent:  {0}", value.ToString("X8"));
-                    // https://stackoverflow.com/a/58708490
-                    Console.WriteLine("value sent:  {0}", string.Join(", ", msg.Select(b => "0x" + b.ToString("X2"))));
+                    PrintMessage(msg);
+                    Thread.Sleep(message_interval);
                 }
             }
             else
             {
                 for (UInt32 value = start_value; value <= target_value; value += (UInt32)step_value)
                 {
-                    byte[] message_gauge_stx = { 0x02 };
-                    byte[] message_gauge_code = { 0x20 };
-                    byte[] message_value = new byte[5];
-                    Buffer.BlockCopy(message_gauge_code, 0, message_value, 0, 1);
-                    Buffer.BlockCopy(BitConverter.GetBytes(value), 0, message_value, 1, 4);
-                    byte message_checksum = CalculateChecksum(message_value);
-
-                    byte[] msg = { 0x02, message_value[0], message_value[4], message_value[3], message_value[2], message_value[1], message_checksum, 0x03 };
+                    byte[] msg = GenerateMessage(message_gauge_code, ValueToGaugeValue(value));
                     _serialPort.Write(msg, 0, 8);
-                    // Console.WriteLine("value sent:  {0}", value.ToString("X8"));
-                    // https://stackoverflow.com/a/58708490
-                    Console.WriteLine("value sent:  {0} (checksum: {1})", string.Join(", ", msg.Select(b => "0x" + b.ToString("X2"))), message_checksum.ToString("X2"));
+                    PrintMessage(msg);
+                    Thread.Sleep(message_interval);
                 }
             }
 
@@ -461,6 +452,96 @@ public class SerialPortTest
             }
         }
 
+        _serialPort.Close();
+    }
+
+    /// <summary>
+    /// Asks the user for the Gauge Code, a start and atarget value, a step value and a message interval.
+    /// Messages are then generated with the specified step value and at the specified message interval.
+    /// </summary>
+    private static void StartToTargetMessageInterval()
+    {
+        bool continue_send_messages = true;
+
+        Console.Clear();
+        Console.WriteLine("Generate + send messages from start to target value with custom step + message interval");
+        Console.WriteLine("---------------------------------------------------------------------------------------");
+        Console.WriteLine();
+
+        _serialPort.Open();
+        _continue = true;
+
+        UInt32 start_value = 0;
+        UInt32 target_value = 100;
+        bool valid_values = false;
+
+        byte[] message_gauge_code = ValueToGaugeCode(ReadGaugeCode());
+
+        while (!valid_values)
+        {
+            start_value = ReadValue("Start value");
+            target_value = ReadValue("Target value", "100");
+            if (start_value == target_value)
+            {
+                Console.WriteLine("ERROR: Start and target value must not be the same value!");
+            }
+            else
+            {
+                valid_values = true;
+            }
+        }
+
+        UInt32 step_value = ReadValue("Step value", "1", 1, 1000);
+        UInt32 message_interval= ReadValue("Message interval [ms]", "50", 50, 1000);
+
+        while (continue_send_messages)
+        {
+            if (start_value < target_value)
+            {
+                for (UInt32 value = start_value; value <= target_value; value += step_value)
+                {
+                    byte[] msg = GenerateMessage(message_gauge_code, ValueToGaugeValue(value));
+                    _serialPort.Write(msg, 0, 8);
+                    PrintMessage(msg);
+                    Thread.Sleep((int)message_interval);
+                }
+            }
+            else
+            {
+                for (UInt32 value = start_value; value >= target_value; value -= step_value)
+                {
+                    byte[] msg = GenerateMessage(message_gauge_code, ValueToGaugeValue(value));
+                    _serialPort.Write(msg, 0, 8);
+                    PrintMessage(msg);
+                    Thread.Sleep((int)message_interval);
+                }
+            }
+            Console.Write("Press ENTER to send another message or press q to quit: ");
+            switch (Console.ReadLine())
+            {
+                case "q":
+                    continue_send_messages = false;
+                    _continue = false;
+                    break;
+                default:
+                    start_value = target_value;
+                    valid_values = false;
+                    Console.WriteLine("current (start) value: {0}", start_value);
+                    while (!valid_values)
+                    {
+                        target_value = ReadValue("(new) Target value", "100");
+                        if (start_value == target_value)
+                        {
+                            Console.WriteLine("ERROR: Start and target value must not be the same value!");
+                        }
+                        else
+                        {
+                            valid_values = true;
+                        }
+                    }
+                    break;
+            }
+        }
         _serialPort.Close();
     }
 

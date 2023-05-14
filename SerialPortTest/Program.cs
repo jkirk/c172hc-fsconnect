@@ -4,6 +4,7 @@
 using System;
 using System.IO.Ports;
 using System.Linq;
+using System.Net.NetworkInformation;
 using System.Threading;
 
 public class SerialPortTest
@@ -212,83 +213,119 @@ public class SerialPortTest
         return (byte)(~sum + 1);
     }
 
-    /// <summary>
-    /// Reads a gauge code from the console input, which is a byte value between 0 and 255.
-    /// If the input is empty, a default value of 32 (0x20) is used.
-    /// </summary>
-    /// <returns>A byte array containing the gauge code.</returns>
-    private static byte[] ReadGaugeCode()
+    private static byte[] ValueToGaugeCode(UInt32 value)
     {
-        byte[] message_gauge_code = new byte[1] { 0x20 };
-        bool valid_input = false;
-        UInt32 input_value = 0;
-
-        while (!valid_input)
-        {
-            Console.Write("Gauge Code (default: 32 (0x20)): ");
-            string input = Console.ReadLine();
-            if (input == "")
-            {
-                valid_input = true;
-            }
-            else
-            {
-                valid_input = UInt32.TryParse(input, out input_value);
-                valid_input = (valid_input && input_value >= 0 && input_value <= 255);
-
-                if (valid_input)
-                {
-                    message_gauge_code = BitConverter.GetBytes(input_value);
-                }
-                else
-                {
-                    Console.WriteLine("ERROR: Gauge Code must be numeric and between 0 and 255");
-                }
-            }
-        }
+        byte[] message_gauge_code = new byte[1];
+        message_gauge_code = BitConverter.GetBytes(value);
         return message_gauge_code;
     }
 
-    /// <summary>
-    /// Reads a gauge value from the console input, which is a byte value between 0 and UInt32.MaxValue.
-    /// If the input is empty, a default value of 0 is used.
-    /// </summary>
-    /// <returns>A byte array containing the gauge value.</returns>
-    private static byte[] ReadGaugeValue()
+    private static byte[] ValueToGaugeValue(UInt32 value)
     {
         byte[] message_gauge_value = new byte[4];
-        bool valid_input = false;
+        message_gauge_value[0] = (byte)(value >> 24);
+        message_gauge_value[1] = (byte)(value >> 16);
+        message_gauge_value[2] = (byte)(value >> 8);
+        message_gauge_value[3] = (byte)value;
+        return message_gauge_value;
+    }
+
+    /// <summary>
+    /// Reads a value from the console, ensuring that it falls within a specified range and is numeric.
+    /// </summary>
+    /// <param name="value_name">The name of the value being read.</param>
+    /// <param name="value_default">The default value to be used if the user enters nothing.</param>
+    /// <param name="value_min">The minimum acceptable value.</param>
+    /// <param name="value_max">The maximum acceptable value.</param>
+    /// <returns>The UInt32 value entered by the user.</returns>
+    private static UInt32 ReadValue(string value_name, string value_default = "0", UInt32 value_min = 0, UInt32 value_max = UInt32.MaxValue)
+    {
         UInt32 input_value = 0;
+        UInt32 default_value = 0;
+        UInt32.TryParse(value_default, out default_value);
+        bool valid_input = false;
 
         while (!valid_input)
         {
-            Console.Write("Gauge Value (default: 0): ");
+            Console.Write(value_name + " (default: {0} (0x{1:X2})): ", value_default, default_value);
             string input = Console.ReadLine();
             if (input == "")
             {
+                input_value = 0;
                 valid_input = true;
             }
             else
             {
                 valid_input = UInt32.TryParse(input, out input_value);
-                valid_input = (valid_input && input_value >= 0 && input_value <= UInt32.MaxValue);
-
-                if (valid_input)
+                valid_input = (valid_input && input_value >= value_min && input_value <= value_max);
+                if (!valid_input)
                 {
-                    message_gauge_value[0] = (byte)(input_value >> 24);
-                    message_gauge_value[1] = (byte)(input_value >> 16);
-                    message_gauge_value[2] = (byte)(input_value >> 8);
-                    message_gauge_value[3] = (byte)input_value;
-                }
-                else
-                {
-                    Console.WriteLine("ERROR: Gauge Value must be numeric and between 0 and {0}", UInt32.MaxValue);
+                    Console.WriteLine("ERROR: {0} must be numeric and between {1} and {2}", value_name, value_min, value_max);
                 }
             }
         }
-        return message_gauge_value;
+        return input_value;
     }
 
+    /// <summary>
+    /// A wrapper around ReadValue, where the Gauge Value is the prompted, the default value is 0 and the code needs to be a value between 0 and UInt32.MaxValue.
+    /// </summary>
+    /// <param name="value_name">The name of the value being read.</param>
+    /// <param name="value_default">The default value to be used if the user enters nothing.</param>
+    /// <param name="value_min">The minimum acceptable value.</param>
+    /// <param name="value_max">The maximum acceptable value.</param>
+    /// <returns>The UInt32 value entered by the user.</returns>
+    private static UInt32 ReadGaugeValue(string value_name = "Gauge Value", string value_default = "0", UInt32 value_min = 0, UInt32 value_max = UInt32.MaxValue)
+    {
+        return ReadValue(value_name, value_default, value_min, value_max);
+    }
+    /// <summary>
+    /// A wrapper around ReadValue, where the Gauge Code is the prompt, default value is 32 (0x20) and the code needs to be a value between 0 and 255.
+    /// </summary>
+    /// <param name="value_name">The name of the value being read.</param>
+    /// <param name="value_default">The default value to be used if the user enters nothing.</param>
+    /// <param name="value_min">The minimum acceptable value.</param>
+    /// <param name="value_max">The maximum acceptable value.</param>
+    /// <returns>The UInt32 value entered by the user.</returns>
+    private static UInt32 ReadGaugeCode(string value_name = "Gauge Code", string value_default = "32", UInt32 value_min = 0, UInt32 value_max = 0xFF)
+    {
+        return ReadValue(value_name, value_default, value_min, value_max);
+    }
+
+    private static int ReadTargetTimeInterval()
+    {
+
+        int _target_time_interval = 0;
+        bool valid_input = false;
+        string input;
+
+        while (!valid_input)
+        {
+            Console.Write("Target time interval: ");
+            input = Console.ReadLine();
+            valid_input = int.TryParse(input, out _target_time_interval);
+            if (_target_time_interval < 1)
+            {
+                valid_input = false;
+                Console.WriteLine("Target time interval needs to be greater 0!");
+            }
+        }
+        return _target_time_interval;
+    }
+
+    /// <summary>
+    /// Generate the c172hc message to be sent to the serial console
+    /// </summary>
+    /// <param name="message_gauge_code">The gauge code.</param>
+    /// <param name="message_gauge_value">The gauge value.</param>
+    /// <returns>The c172hc message as byte array[].</returns>
+    private static byte[] GenerateMessage(byte[] message_gauge_code, byte[] message_gauge_value)
+    {
+        const byte message_stx = 0x02;
+        const byte message_etx = 0x03;
+        byte message_checksum = CalculateChecksum(message_gauge_code.Concat(message_gauge_value).ToArray());
+        return new byte[] { message_stx, message_gauge_code[0], message_gauge_value[0], message_gauge_value[1], message_gauge_value[2], message_gauge_value[3], message_checksum, message_etx };
+    }
     /// <summary>
     /// Asks the user for Gauge Code + Gauge Vaule and sends a message to the serial port.
     /// The message consists of a start-of-text (STX) byte, a gauge code byte, a value byte array of length 4, a checksum byte, and an end-of-text (ETX) byte.
@@ -303,17 +340,13 @@ public class SerialPortTest
         Console.WriteLine("Please enter values in decimal numeral system.");
         Console.WriteLine();
 
-        byte[] message_gauge_code = ReadGaugeCode();
-        byte[] message_gauge_value = ReadGaugeValue();
-
-        const byte message_stx = 0x02;
-        byte message_checksum = CalculateChecksum(message_gauge_code.Concat(message_gauge_value).ToArray());
-        const byte message_etx = 0x03;
-        byte[] msg = { message_stx, message_gauge_code[0], message_gauge_value[0], message_gauge_value[1], message_gauge_value[2], message_gauge_value[3], message_checksum, message_etx };
-
         _serialPort.Open();
+
+        byte[] msg = GenerateMessage(ValueToGaugeCode(ReadGaugeCode()), ValueToGaugeValue(ReadGaugeValue()));
+
         _serialPort.Write(msg, 0, msg.Length);
         PrintMessage(msg);
+
         _serialPort.Close();
         Console.Write("Press ENTER to return to main menu!");
         _ = Console.ReadLine();
@@ -326,8 +359,7 @@ public class SerialPortTest
     /// </summary>
     private static void SendMessages()
     {
-        const byte message_stx = 0x02;
-        const byte message_etx = 0x03;
+        
         bool _continue = true;
 
         Console.Clear();
@@ -340,10 +372,8 @@ public class SerialPortTest
         _serialPort.Open();
         while (_continue)
         {
-            byte[] message_gauge_code = ReadGaugeCode();
-            byte[] message_gauge_value = ReadGaugeValue();
-            byte message_checksum = CalculateChecksum(message_gauge_code.Concat(message_gauge_value).ToArray());
-            byte[] msg = { message_stx, message_gauge_code[0], message_gauge_value[0], message_gauge_value[1], message_gauge_value[2], message_gauge_value[3], message_checksum, message_etx };
+            byte[] msg = GenerateMessage(ValueToGaugeCode(ReadGaugeCode()), ValueToGaugeValue(ReadGaugeValue()));
+
             _serialPort.Write(msg, 0, msg.Length);
             PrintMessage(msg);
 
@@ -363,27 +393,26 @@ public class SerialPortTest
 
     private static void StartToTargetValue()
     {
-        int start_value = 0;
-        int target_value = 0;
+        UInt32 start_value = 0;
+        UInt32 target_value = 0;
         int target_time_interval = 0;
         float message_interval = 0.05F;  // 50ms
         string message;
-       
 
-        start_value = ReadStartValue();
-        target_value = ReadTargetValue(start_value);
+        start_value = ReadValue("Start value");
+        target_value = ReadValue("Target value");
         target_time_interval = ReadTargetTimeInterval();
 
         _serialPort.Open();
         _continue = true;
         while (_continue)
         {
-            int step_value = Convert.ToInt32(Math.Ceiling((target_value - start_value) / target_time_interval * message_interval + 0.5));
+            Int32 step_value = Convert.ToInt32(Math.Ceiling((target_value - start_value) / target_time_interval * message_interval + 0.5));
             Console.WriteLine("step_value: {0}", step_value);
 
             if (step_value < 0)
             {
-                for (int value = start_value; value >= target_value; value += step_value)
+                for (UInt32 value = start_value; value >= target_value; value += (UInt32)step_value)
                 {
                     byte[] message_gauge_stx = { 0x02 };
                     byte[] message_gauge_code = { 0x20 };
@@ -401,7 +430,7 @@ public class SerialPortTest
             }
             else
             {
-                for (int value = start_value; value <= target_value; value += step_value)
+                for (UInt32 value = start_value; value <= target_value; value += (UInt32)step_value)
                 {
                     byte[] message_gauge_stx = { 0x02 };
                     byte[] message_gauge_code = { 0x20 };
@@ -428,80 +457,11 @@ public class SerialPortTest
             else
             {
                 start_value = target_value;
-                target_value = ReadTargetValue(start_value);
+                target_value = ReadValue("Target value");
             }
         }
 
         _serialPort.Close();
-    }
-
-    private static int ReadStartValue()
-    {
-        int _start_value = 0;
-        bool valid_input = false;
-        string input;
-        while (!valid_input)
-        {
-            Console.Write("Start value (default: 0): ");
-            input = Console.ReadLine();
-            if (input == "")
-            {
-                valid_input = true;
-            }
-            else
-            {
-                valid_input = int.TryParse(input, out _start_value);
-                if (!valid_input)
-                {
-                    Console.WriteLine("Given start value is invalid!");
-                }
-            }
-        }
-        return _start_value;
-    }
-    private static int ReadTargetValue(int _start_value)
-    {
-        int _target_value = 0;
-        bool valid_input = false;
-        string input;
-
-        while (!valid_input)
-        {
-            Console.Write("Target value: ");
-            input = Console.ReadLine();
-            valid_input = int.TryParse(input, out _target_value);
-            if (!valid_input)
-            {
-                Console.WriteLine("Given target value is invalid!");
-            }
-            else if (_target_value == _start_value)
-            {
-                valid_input = false;
-                Console.WriteLine("Start value and target value can not be the same value!");
-            }
-        }
-        return _target_value;
-    }
-
-    private static int ReadTargetTimeInterval()
-    {
-        
-        int _target_time_interval = 0;
-        bool valid_input = false;
-        string input;
-
-        while (!valid_input)
-        {
-            Console.Write("Target time interval: ");
-            input = Console.ReadLine();
-            valid_input = int.TryParse(input, out _target_time_interval);
-            if (_target_time_interval < 1)
-            {
-                valid_input = false;
-                Console.WriteLine("Target time interval needs to be greater 0!");
-            }
-        }
-        return _target_time_interval;
     }
 
     public static void Read()

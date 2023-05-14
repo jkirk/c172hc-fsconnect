@@ -73,7 +73,8 @@ public class SerialPortTest
         Console.WriteLine("2) Send Airspeed Demo Message (hardcoded checksum)");
         Console.WriteLine("3) Send Airspeed Demo Message (calculated checksum)");
         Console.WriteLine("4) Send (single) Message (Gauge Type, Gauge Value)");
-        Console.WriteLine("5) Send start to target value in time interval");
+        Console.WriteLine("5) Send (multiple) Messages (Gauge Type, Gauge Value)");
+        Console.WriteLine("6) Send start to target value in time interval");
         Console.WriteLine();
         Console.WriteLine("q) Quit");
         Console.WriteLine();
@@ -94,6 +95,9 @@ public class SerialPortTest
                 SendMessage();
                 return true;
             case "5":
+                SendMessages();
+                return true;
+            case "6":
                 StartToTargetValue();
                 return true;
             case "q":
@@ -293,8 +297,8 @@ public class SerialPortTest
     private static void SendMessage()
     {
         Console.Clear();
-        Console.WriteLine("Send Message (Gauge Code, Gauge Value)");
-        Console.WriteLine("--------------------------------------");
+        Console.WriteLine("Send (single) Message (Gauge Code, Gauge Value)");
+        Console.WriteLine("-----------------------------------------------");
         Console.WriteLine();
         Console.WriteLine("Please enter values in decimal numeral system.");
         Console.WriteLine();
@@ -311,8 +315,50 @@ public class SerialPortTest
         _serialPort.Write(msg, 0, msg.Length);
         PrintMessage(msg);
         _serialPort.Close();
-        Console.Write("Press ENTER to return to main menu! ");
+        Console.Write("Press ENTER to return to main menu!");
         _ = Console.ReadLine();
+    }
+
+    /// <summary>
+    /// Asks the user repeatedly for Gauge Code + Gauge Vaule and sends multiple message to the serial port.
+    /// The message consists of a start-of-text (STX) byte, a gauge code byte, a value byte array of length 4, a checksum byte, and an end-of-text (ETX) byte.
+    /// The checksum is calculated based on the gauge code byte and the value byte array using the CalculateChecksum() method.
+    /// </summary>
+    private static void SendMessages()
+    {
+        const byte message_stx = 0x02;
+        const byte message_etx = 0x03;
+        bool _continue = true;
+
+        Console.Clear();
+        Console.WriteLine("Send (multiple) Messages (Gauge Code, Gauge Value)");
+        Console.WriteLine("--------------------------------------------------");
+        Console.WriteLine();
+        Console.WriteLine("Please enter values in decimal numeral system.");
+        Console.WriteLine();
+
+        _serialPort.Open();
+        while (_continue)
+        {
+            byte[] message_gauge_code = ReadGaugeCode();
+            byte[] message_gauge_value = ReadGaugeValue();
+            byte message_checksum = CalculateChecksum(message_gauge_code.Concat(message_gauge_value).ToArray());
+            byte[] msg = { message_stx, message_gauge_code[0], message_gauge_value[0], message_gauge_value[1], message_gauge_value[2], message_gauge_value[3], message_checksum, message_etx };
+            _serialPort.Write(msg, 0, msg.Length);
+            PrintMessage(msg);
+
+            Console.Write("Press ENTER to send another message or press q to quit: ");
+            switch (Console.ReadLine())
+            {
+                case "q":
+                    _continue = false;
+                    break;
+                default:
+                    break;
+            }
+            
+        }
+        _serialPort.Close();
     }
 
     private static void StartToTargetValue()

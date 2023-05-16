@@ -476,26 +476,29 @@ public class SerialPortTest
         bool valid_values = false;
 
         byte[] message_gauge_code = ValueToGaugeCode(ReadGaugeCode());
-
-        while (!valid_values)
-        {
-            start_value = ReadValue("Start value");
-            target_value = ReadValue("Target value", "100");
-            if (start_value == target_value)
-            {
-                Console.WriteLine("ERROR: Start and target value must not be the same value!");
-            }
-            else
-            {
-                valid_values = true;
-            }
-        }
-
-        UInt32 step_value = ReadValue("Step value", "1", 1, 1000);
-        UInt32 message_interval= ReadValue("Message interval [ms]", "50", 50, 1000);
-
+        start_value = ReadValue("Start value");
+        
         while (continue_send_messages)
         {
+            while (!valid_values)
+            {
+
+                target_value = ReadValue("Target value", "100");
+                if (start_value == target_value)
+                {
+                    Console.WriteLine("ERROR: Start and target value must not be the same value!");
+                }
+                else
+                {
+                    valid_values = true;
+                }
+            }
+
+            UInt32 step_value = ReadValue("Step value", "1", 1, 1000);
+            UInt32 message_interval = ReadValue("Message interval [ms]", "50", 50, 1000);
+            Console.WriteLine("Press ENTER to send messsages");
+            _ = Console.ReadLine();
+
             if (start_value < target_value)
             {
                 for (UInt32 value = start_value; value <= target_value; value += step_value)
@@ -527,18 +530,6 @@ public class SerialPortTest
                     start_value = target_value;
                     valid_values = false;
                     Console.WriteLine("current (start) value: {0}", start_value);
-                    while (!valid_values)
-                    {
-                        target_value = ReadValue("(new) Target value", "100");
-                        if (start_value == target_value)
-                        {
-                            Console.WriteLine("ERROR: Start and target value must not be the same value!");
-                        }
-                        else
-                        {
-                            valid_values = true;
-                        }
-                    }
                     break;
             }
         }

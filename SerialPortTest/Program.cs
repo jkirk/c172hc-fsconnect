@@ -11,45 +11,65 @@ using System.Threading.Tasks;
 
 public class SerialPortTest
 {
+    static bool _continueDetectSerialPortsThread = false;
     static bool _continue;
     static SerialPort _serialPort;
-    static string _defaultPortName;
+    static bool _serialPortsExists = false;
+    static bool _serialPortIsConnected = false;
+    static int _serialPortCount = 0;
+    static string _defaultPortName = "COM1";
 
     /// <summary>
-    /// Initializes a SerialPort object, exit the application if no serial port is found and displays a menu to the user until the program is exited.
+    /// Continuously detects the presence of new or removed serial ports in the system using the SerialPort class.
+    /// If a new port is detected, sets the default port to the last one in the list of port names and opens the new port for communication.
+    /// If a port is lost, sets the default port to the last one in the list of port names if any, or sets the serialPortsExists flag to False and prints a warning message.
+    /// The function runs in a separate thread until _continueDetectSerialPortsThread is set to False.
     /// </summary>
-    public static void Main()
+    private static void DetectSerialPorts()
     {
-        Thread readThread = new Thread(Read);
+        while (_continueDetectSerialPortsThread)
+        {
+            string[] ports = SerialPort.GetPortNames();
+            if (_serialPortCount < ports.Length && ports.Length > 0)
+            {
+                _serialPortCount = ports.Length;
+                _defaultPortName = ports[ports.Length - 1];
+                _serialPort.PortName = _defaultPortName;
+                _serialPortsExists = true;
 
-        // Create a new SerialPort object with default settings.
-        _serialPort = new SerialPort();
-
-        // Get serial ports and use the last one found by default
-        // and exit the application if none are detected.
-        string[] ports = SerialPort.GetPortNames();
+                Console.WriteLine($"\nINFO: New port detected: {ports[ports.Length - 1]}");
+            }
+            else if (_serialPortCount > ports.Length)
+            {
+                _serialPortCount = ports.Length;
+                Console.WriteLine("\nINFO: Port lost!");
         if (ports.Length > 0)
         {
             _defaultPortName = ports[ports.Length - 1];
             _serialPort.PortName = _defaultPortName;
+                    _serialPortsExists = true;
         }
         else
         {
-            Console.Clear();
-            Console.WriteLine("Welcome to c172hc-fsconnect SerialPortTest!");
-            Console.WriteLine("-------------------------------------------");
-            Console.WriteLine();
-            Console.WriteLine("ERROR: Sorry, no COM ports found!");
-            Console.WriteLine();
-            Console.WriteLine("Please press ENTER to exit the application!");
-            _ = Console.ReadLine();
-            return;
+                    _serialPortsExists = false;
+                    Console.WriteLine("\nWARNING: no COM ports found!");
+                }
+            }
+            Thread.Sleep(1000);
         }
-        // Set the read/write timeouts
-        _serialPort.ReadTimeout = 500;
-        _serialPort.WriteTimeout = 500;
+        }
 
-        readThread.Start();
+    /// <summary>
+    /// Initializes a SerialPort object, starts the Thread which detects new serial ports and and displays a menu to the user until the program is exited.
+    /// </summary>
+    public static void Main()
+    {
+        // Create a new SerialPort object with default settings.
+        _serialPort = new SerialPort();
+        Thread detectSerialPortsThread = new Thread(DetectSerialPorts);
+
+        detectSerialPortsThread.Start();
+        _continueDetectSerialPortsThread = true;
 
         bool showMenu = true;
         while (showMenu)
@@ -57,7 +77,9 @@ public class SerialPortTest
             showMenu = MainMenu();
         }
 
-        readThread.Join();
+        _continueDetectSerialPortsThread = false;
+        Console.WriteLine("\nINFO: Shutting down serial interface...");
+        detectSerialPortsThread.Join();
         _serialPort.Close();
     }
 
@@ -70,7 +92,15 @@ public class SerialPortTest
         Console.WriteLine("Welcome to c172hc-fsconnect SerialPortTest!");
         Console.WriteLine("-------------------------------------------");
         Console.WriteLine();
-        Console.WriteLine("Current serial port settings: {0} ({1},{2},{3},{4},{5})", _serialPort.PortName, _serialPort.BaudRate, _serialPort.DataBits, _serialPort.Parity, _serialPort.StopBits, _serialPort.Handshake);
+        if (_serialPortsExists)
+        {
+            Console.WriteLine("Current serial port settings: {0} ({1},{2},{3},{4},{5})", _serialPort.PortName, _serialPort.BaudRate, _serialPort.DataBits, _serialPort.Parity, _serialPort.StopBits, _serialPort.Handshake);
+        }
+        else
+        {
+            Console.WriteLine("No COM ports detected!");
+        }
+        
         Console.WriteLine();
         Console.WriteLine("1) Configure Serial Port");
         Console.WriteLine("2) Send Airspeed Demo Message (hardcoded checksum)");
@@ -80,34 +110,32 @@ public class SerialPortTest
         Console.WriteLine("6) Send start to target messages within given time interval");
         Console.WriteLine("7) Generate + send messages from start to target value with custom step + message interval");
         Console.WriteLine();
+        Console.WriteLine("r) Reload main menu");
         Console.WriteLine("q) Quit");
         Console.WriteLine();
         Console.Write("Select an option: ");
 
-        switch (Console.ReadLine())
+        switch (Console.ReadKey().Key)
         {
-            case "1":
+            case ConsoleKey.D1:
                 ConfigureSerialPort();
                 return true;
-            case "2":
+            case ConsoleKey.D2:
                 AirspeedDemoMessageHardcoded();
                 return true;
-            case "3":
+            case ConsoleKey.D3:
                 AirspeedDemoMessageCalculated();
                 return true;
-            case "4":
+            case ConsoleKey.D4:
                 SendMessage();
                 return true;
-            case "5":
+            case ConsoleKey.D5:
                 SendMessages();
                 return true;
-            case "6":
-                StartToTargetValue();
-                return true;
-            case "7":
+            case ConsoleKey.D7:
                 StartToTargetMessageInterval();
                 return true;
-            case "q":
+            case ConsoleKey.Q:
                 return false;
             default:
                 return true;
@@ -121,6 +149,7 @@ public class SerialPortTest
     {
         _serialPort.Close();
         // Allow the user to set the appropriate properties.
+        Console.WriteLine();
         _serialPort.PortName = SetPortName(_defaultPortName);
         _serialPort.BaudRate = SetPortBaudRate(_serialPort.BaudRate);
         _serialPort.DataBits = SetPortDataBits(_serialPort.DataBits);

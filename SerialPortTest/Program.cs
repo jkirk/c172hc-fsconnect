@@ -4,7 +4,9 @@
 using System;
 using System.IO.Ports;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Net.NetworkInformation;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -107,8 +109,8 @@ public class SerialPortTest
         Console.WriteLine("3) Send Airspeed Demo Message (calculated checksum)");
         Console.WriteLine("4) Send (single) Message (Gauge Type, Gauge Value)");
         Console.WriteLine("5) Send (multiple) Messages (Gauge Type, Gauge Value)");
-        Console.WriteLine("6) Send start to target messages within given time interval");
         Console.WriteLine("7) Generate + send messages from start to target value with custom step + message interval");
+        Console.WriteLine("8) Latency Analysis (Send n messages @ m ms)");
         Console.WriteLine();
         Console.WriteLine("r) Reload main menu");
         Console.WriteLine("q) Quit");
@@ -135,6 +137,10 @@ public class SerialPortTest
             case ConsoleKey.D7:
                 StartToTargetMessageInterval();
                 return true;
+            case ConsoleKey.D8:
+                LatencyAnalysis();
+                return true;
+
             case ConsoleKey.Q:
                 return false;
             default:
@@ -481,6 +487,147 @@ public class SerialPortTest
             }
         }
 
+        _serialPort.Close();
+    }
+
+    /// <summary>
+    /// Asks the user for the Gauge Code, a start and a target value, a step value, a timeout and perform a latency analysis.
+    /// </summary>
+    private static void LatencyAnalysis()
+    {
+        Console.Clear();
+        Console.WriteLine("Latency Analysis");
+        Console.WriteLine("----------------");
+        Console.WriteLine();
+
+        bool continue_send_messages = true;
+        UInt32 start_value = 0;
+
+        //_serialPort.Open();
+        
+        // At a baud rate of 9600 the maximum number of 8 byte messages would be 150
+        // We expect messages every 50ms, so we can try to time out after 100ms
+        // _serialPort.ReadTimeout = 100;
+
+        byte[] message_gauge_code = ValueToGaugeCode(ReadGaugeCode());
+        start_value = ReadValue("Start value");
+
+        while (continue_send_messages)
+        {
+            bool valid_values = false;
+            UInt32 target_value = 100;
+            string serialport_data_block = "";
+            int messsage_sent_count = 0;
+
+            while (!valid_values)
+            {
+                if (start_value == 100)
+                {
+                    target_value = ReadValue("Target value", "200");
+                }
+                else
+                {
+                    target_value = ReadValue("Target value", "100");
+                }
+                
+                if (start_value == target_value)
+                {
+                    Console.WriteLine("ERROR: Start and target value must not be the same value!");
+                }
+                else
+                {
+                    valid_values = true;
+                }
+            }
+
+            UInt32 step_value = ReadValue("Step value", "1", 1, 1000);
+            UInt32 message_interval = ReadValue("Message interval [ms]", "50", 50, 1000);
+            UInt32 timeout_value = ReadValue("No data timeout after [ms]", "10000", 1);
+            _serialPort.Open();
+            _serialPort.ReadTimeout = (int)timeout_value;
+
+            DateTime latencyAnalysisStart = DateTime.Now;
+            bool latency_analysis = true;
+
+            Console.WriteLine("Waiting for Latency Analysis start code @ {0}...", latencyAnalysisStart.ToString("yyyy-MM-ddTHH:mm:sszzz", System.Globalization.CultureInfo.InvariantCulture));
+            while (latency_analysis)
+            {
+                try
+                {
+                    // c172hc-fsmaster basically does the following to send the start code 0x55:
+                    //
+                    //   int startCode = 0x55;
+                    //   Serial.println(startCode);
+                    //
+                    // What happens is, that the decimal value of startCode = 0x55 (= 85) gets converted to the string "85\r\n"
+                    // see: https://www.arduino.cc/reference/en/language/functions/communication/serial/println/
+                    //
+                    // So we have to trim the received string and match it against the string "85"
+
+                    string serialport_data = _serialPort.ReadLine();
+
+                    if (serialport_data.Trim() == "85" && messsage_sent_count == 0)
+                    {
+                        Console.WriteLine("Start code detected!");
+                        Console.WriteLine("Latency Analysis started at: " + DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz", System.Globalization.CultureInfo.InvariantCulture));
+                        serialport_data_block = "";
+
+                        if (start_value < target_value)
+                        {
+                            for (UInt32 value = start_value; value <= target_value; value += step_value)
+                            {
+                                byte[] msg = GenerateMessage(message_gauge_code, ValueToGaugeValue(value));
+                                _serialPort.Write(msg, 0, 8);
+                                messsage_sent_count++;
+                                //  PrintMessage(msg);
+                                Thread.Sleep((int)message_interval);
+                            }
+                        }
+                        else
+                        {
+                            for (UInt32 value = start_value; value >= target_value; value -= step_value)
+                            {
+                                byte[] msg = GenerateMessage(message_gauge_code, ValueToGaugeValue(value));
+                                _serialPort.Write(msg, 0, 8);
+                                messsage_sent_count++;
+                                // PrintMessage(msg);
+                                Thread.Sleep((int)message_interval);
+                            }
+                        }
+                    }
+                    else if (serialport_data.Trim() == "85" && messsage_sent_count > 0)
+                    {
+                        Console.WriteLine("Latency Analysis stopped at: " + DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz", System.Globalization.CultureInfo.InvariantCulture));
+                        _serialPort.Close();
+                        Console.WriteLine("== Latency Analysis Summary ==");
+                        Console.WriteLine();
+                        Console.WriteLine(serialport_data_block);
+                        Console.WriteLine("# messsages sent: {0}", messsage_sent_count);
+                        latency_analysis = false;
+                    }
+                    else if (serialport_data.Trim() != "85" && messsage_sent_count > 0)
+                    {
+                        serialport_data_block = serialport_data_block + "\n" + serialport_data;
+                    }
+                }
+                catch (TimeoutException)
+                {
+                    Console.WriteLine("Timeout @ " + DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz", System.Globalization.CultureInfo.InvariantCulture));
+                    latency_analysis = false;
+                }
+            }
+            Console.Write("Press ENTER to send another message or press q to quit: ");
+            switch (Console.ReadKey().Key)
+            {
+                case ConsoleKey.Q:
+                    continue_send_messages = false;
+                    break;
+                default:
+                    start_value = target_value;
+                    Console.WriteLine("\ncurrent (start) value: {0}", start_value);
+                    break;
+            }
+        }
         _serialPort.Close();
     }
 

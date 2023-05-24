@@ -509,25 +509,23 @@ public class SerialPortTest
         // _serialPort.ReadTimeout = 100;
 
         byte[] message_gauge_code = ValueToGaugeCode(ReadGaugeCode());
-        uint start_value = ReadValue("Start value");
+        uint start_value = 1;
+        uint step_value = 1;
+        uint message_interval = 200;
+        uint timeout_value = 10000;
 
         while (continue_send_messages)
         {
             bool valid_values = false;
-            uint target_value = 100;
             string serialport_data_block = "";
             int messsage_sent_count = 0;
 
+            start_value = ReadValue("Start value", start_value.ToString());
+            uint target_value = start_value + 9;
+
             while (!valid_values)
             {
-                if (start_value == 100)
-                {
-                    target_value = ReadValue("Target value", "200");
-                }
-                else
-                {
-                    target_value = ReadValue("Target value", "100");
-                }
+                target_value = ReadValue("Target value", target_value.ToString());
                 
                 if (start_value == target_value)
                 {
@@ -539,13 +537,16 @@ public class SerialPortTest
                 }
             }
 
-            uint step_value = ReadValue("Step value", "1", 1, 1000);
-            uint message_interval = ReadValue("Message interval [ms]", "50", 50, 1000);
-            uint timeout_value = ReadValue("No data timeout after [ms]", "10000", 1);
+            step_value = ReadValue("Step value", step_value.ToString(), 1, 1000);
+            message_interval = ReadValue("Message interval [ms]", message_interval.ToString(), 50, 1000);
+            timeout_value = ReadValue("No data timeout after [ms]", timeout_value.ToString(), 1);
             _serialPort.Open();
             _serialPort.ReadTimeout = (int)timeout_value;
 
             DateTime latencyAnalysisStart = DateTime.Now;
+            DateTime message_sent_start = DateTime.Now;
+            DateTime message_sent_end = DateTime.Now;
+
             bool latency_analysis = true;
 
             Console.WriteLine("Waiting for Latency Analysis start code @ {0}...", latencyAnalysisStart.ToString("yyyy-MM-ddTHH:mm:sszzz", System.Globalization.CultureInfo.InvariantCulture));
@@ -570,6 +571,7 @@ public class SerialPortTest
                         Console.WriteLine("Start code detected!");
                         Console.WriteLine("Latency Analysis started at: " + DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz", System.Globalization.CultureInfo.InvariantCulture));
                         serialport_data_block = "";
+                        message_sent_start = DateTime.Now;
 
                         if (start_value < target_value)
                         {
@@ -593,15 +595,21 @@ public class SerialPortTest
                                 Thread.Sleep((int)message_interval);
                             }
                         }
+                        message_sent_end = DateTime.Now;
+                        Console.WriteLine($"Sent {messsage_sent_count} messsages in {(message_sent_end - message_sent_start).TotalMilliseconds} ms");
                     }
                     else if (serialport_data.Trim() == "85" && messsage_sent_count > 0)
                     {
                         Console.WriteLine("Latency Analysis stopped at: " + DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz", System.Globalization.CultureInfo.InvariantCulture));
                         _serialPort.Close();
                         Console.WriteLine("== Latency Analysis Summary ==");
-                        Console.WriteLine();
                         Console.WriteLine(serialport_data_block);
-                        Console.WriteLine("# messsages sent: {0}", messsage_sent_count);
+                        if ((message_sent_end - message_sent_start).TotalMilliseconds > 10000)
+                        {
+                            Console.WriteLine($"WARNING: Sending messages took more than 10000 ms!");
+                        }
+                        Console.WriteLine($"Sent {messsage_sent_count} messsages in {(message_sent_end - message_sent_start).TotalMilliseconds} ms");
+                        Console.WriteLine();
                         latency_analysis = false;
                     }
                     else if (serialport_data.Trim() != "85" && messsage_sent_count > 0)
@@ -623,7 +631,8 @@ public class SerialPortTest
                     break;
                 default:
                     start_value = target_value;
-                    Console.WriteLine("\ncurrent (start) value: {0}", start_value);
+                    Console.WriteLine();
+                    //Console.WriteLine("\ncurrent (start) value: {0}", start_value);
                     break;
             }
         }

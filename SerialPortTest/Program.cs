@@ -501,7 +501,6 @@ public class SerialPortTest
         Console.WriteLine();
 
         bool continue_send_messages = true;
-        UInt32 start_value = 0;
 
         //_serialPort.Open();
         
@@ -510,12 +509,12 @@ public class SerialPortTest
         // _serialPort.ReadTimeout = 100;
 
         byte[] message_gauge_code = ValueToGaugeCode(ReadGaugeCode());
-        start_value = ReadValue("Start value");
+        uint start_value = ReadValue("Start value");
 
         while (continue_send_messages)
         {
             bool valid_values = false;
-            UInt32 target_value = 100;
+            uint target_value = 100;
             string serialport_data_block = "";
             int messsage_sent_count = 0;
 
@@ -540,9 +539,9 @@ public class SerialPortTest
                 }
             }
 
-            UInt32 step_value = ReadValue("Step value", "1", 1, 1000);
-            UInt32 message_interval = ReadValue("Message interval [ms]", "50", 50, 1000);
-            UInt32 timeout_value = ReadValue("No data timeout after [ms]", "10000", 1);
+            uint step_value = ReadValue("Step value", "1", 1, 1000);
+            uint message_interval = ReadValue("Message interval [ms]", "50", 50, 1000);
+            uint timeout_value = ReadValue("No data timeout after [ms]", "10000", 1);
             _serialPort.Open();
             _serialPort.ReadTimeout = (int)timeout_value;
 
@@ -574,7 +573,7 @@ public class SerialPortTest
 
                         if (start_value < target_value)
                         {
-                            for (UInt32 value = start_value; value <= target_value; value += step_value)
+                            for (uint value = start_value; (value <= target_value) && (value >= start_value); value += step_value)
                             {
                                 byte[] msg = GenerateMessage(message_gauge_code, ValueToGaugeValue(value));
                                 _serialPort.Write(msg, 0, 8);
@@ -585,7 +584,7 @@ public class SerialPortTest
                         }
                         else
                         {
-                            for (UInt32 value = start_value; value >= target_value; value -= step_value)
+                            for (uint value = start_value; (value >= target_value) && (value <= start_value); value -= step_value)
                             {
                                 byte[] msg = GenerateMessage(message_gauge_code, ValueToGaugeValue(value));
                                 _serialPort.Write(msg, 0, 8);

@@ -501,15 +501,19 @@ public class SerialPortTest
         Console.WriteLine();
 
         bool continue_send_messages = true;
+        bool query_values = true;
+        bool query_target_only = false;
+        bool query_interval_only = false;
 
         //_serialPort.Open();
-        
+
         // At a baud rate of 9600 the maximum number of 8 byte messages would be 150
         // We expect messages every 50ms, so we can try to time out after 100ms
         // _serialPort.ReadTimeout = 100;
 
         byte[] message_gauge_code = ValueToGaugeCode(ReadGaugeCode());
         uint start_value = 1;
+        uint target_value = start_value + 9;
         uint step_value = 1;
         uint message_interval = 200;
         uint timeout_value = 10000;
@@ -520,26 +524,62 @@ public class SerialPortTest
             string serialport_data_block = "";
             int messsage_sent_count = 0;
 
-            start_value = ReadValue("Start value", start_value.ToString());
-            uint target_value = start_value + 9;
-
-            while (!valid_values)
+            if (query_values)
             {
-                target_value = ReadValue("Target value", target_value.ToString());
-                
-                if (start_value == target_value)
+                if (!query_target_only && !query_interval_only)
                 {
-                    Console.WriteLine("ERROR: Start and target value must not be the same value!");
+                    start_value = ReadValue("Start value", start_value.ToString());
                 }
-                else
-                {
-                    valid_values = true;
-                }
-            }
 
-            step_value = ReadValue("Step value", step_value.ToString(), 1, 1000);
-            message_interval = ReadValue("Message interval [ms]", message_interval.ToString(), 50, 1000);
-            timeout_value = ReadValue("No data timeout after [ms]", timeout_value.ToString(), 1);
+                if (!query_interval_only)
+
+                {
+                    target_value = start_value + 9;
+
+                    while (!valid_values)
+                    {
+                        target_value = ReadValue("Target value", target_value.ToString());
+
+                        if (start_value == target_value)
+                        {
+                            Console.WriteLine("ERROR: Start and target value must not be the same value!");
+                        }
+                        else
+                        {
+                            valid_values = true;
+                        }
+                    }
+                }
+
+                if (query_target_only)
+                {
+                    goto EndIf;
+                }
+
+                if (!query_interval_only)
+                {
+                    step_value = ReadValue("Step value", step_value.ToString(), 1, 1000);
+                }
+
+                message_interval = ReadValue("Message interval [ms]", message_interval.ToString(), 50, 1000);
+
+                if (query_interval_only)
+                {
+                    goto EndIf;
+                }
+                timeout_value = ReadValue("No data timeout after [ms]", timeout_value.ToString(), 1);
+            }
+            else
+            {
+                Console.WriteLine("Start value: {0}", start_value);
+                Console.WriteLine("Target value: {0}", target_value);
+                Console.WriteLine("Message interval [ms]: {0}", message_interval);
+            }
+        EndIf:
+            query_values = true;
+            query_interval_only = false;
+            query_target_only = false;
+
             _serialPort.Open();
             _serialPort.ReadTimeout = (int)timeout_value;
 
@@ -623,15 +663,32 @@ public class SerialPortTest
                     latency_analysis = false;
                 }
             }
-            Console.Write("Press ENTER to send another message or press q to quit: ");
+            Console.WriteLine("Press:");
+            Console.WriteLine("ENTER to send new messages");
+            Console.WriteLine("r to repeat the same messages");
+            Console.WriteLine("i to change the message interval only");
+            Console.WriteLine("t to change the target value only");
+            Console.WriteLine("q to quit\n");
+
             switch (Console.ReadKey().Key)
             {
                 case ConsoleKey.Q:
                     continue_send_messages = false;
                     break;
+                case ConsoleKey.I:
+                    query_values = true;
+                    query_interval_only = true;
+                    break;
+                case ConsoleKey.T:
+                    query_values = true;
+                    query_target_only = true;
+                    break;
+                case ConsoleKey.R:
+                    query_values = false;
+                    break;
                 default:
                     start_value = target_value;
-                    Console.WriteLine();
+                    query_values = true;
                     //Console.WriteLine("\ncurrent (start) value: {0}", start_value);
                     break;
             }

@@ -5,7 +5,7 @@ Such individual instruments are expensive and require either multiple USB connec
 
 This project reads telemetry data from MS Flight Simulator and an Arduino and ESP32 based controller distributes it to each avionics instrument (gauge) via a two-wire interface connected to each gauge which has its own microcontroller.
 
-We have designed a system in which extracts the information from the Flight Simulator and an Arduino and ESP32 based controller distributes to each Avionics instrument (Gauge) through a two-wire interface connecting to all the gauges having their own microcontroller. This greatly reduces the wiring.
+We have designed a system that extracts the information from the flight simulator and distributes it to each avionics instrument (gauge) through an Arduino and ESP32 based controller via a two-wire interface connected to each gauge that has its own microcontroller. This greatly reduces the wiring.
 
 ## c172hc-fsconnect
 

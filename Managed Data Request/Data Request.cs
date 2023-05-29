@@ -26,7 +26,7 @@ namespace Managed_Data_Request
     {
 
         // User-defined win32 event
-        const int WM_USER_SIMCONNECT = 0x0402;
+        const int WM_USER_SIMCONNECT = 0x0403;
 
         // SimConnect object
         SimConnect simconnect = null;
@@ -52,6 +52,7 @@ namespace Managed_Data_Request
             public double latitude;
             public double longitude;
             public double altitude;
+            public double airspeed_indicated;
         };
 
         public Form1()
@@ -114,6 +115,7 @@ namespace Managed_Data_Request
                 simconnect.AddToDataDefinition(DEFINITIONS.Struct1, "Plane Latitude", "degrees", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
                 simconnect.AddToDataDefinition(DEFINITIONS.Struct1, "Plane Longitude", "degrees", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
                 simconnect.AddToDataDefinition(DEFINITIONS.Struct1, "Plane Altitude", "feet", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.Struct1, "AIRSPEED INDICATED", "knots", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
 
                 // IMPORTANT: register it with the simconnect managed wrapper marshaller
                 // if you skip this step, you will only receive a uint in the .dwData field.
@@ -159,10 +161,11 @@ namespace Managed_Data_Request
                 case DATA_REQUESTS.REQUEST_1:
                     Struct1 s1 = (Struct1)data.dwData[0];
 
-                    displayText("Title: " + s1.title);
-                    displayText("Lat:   " + s1.latitude);
-                    displayText("Lon:   " + s1.longitude);
-                    displayText("Alt:   " + s1.altitude);
+                    displayText("Title:   " + s1.title);
+                    displayText("Lat:     " + s1.latitude);
+                    displayText("Lon:     " + s1.longitude);
+                    displayText("Alt:     " + s1.altitude);
+                    displayText("Airspeed:" + s1.airspeed_indicated * 1.150779);
                     break;
 
                 default:

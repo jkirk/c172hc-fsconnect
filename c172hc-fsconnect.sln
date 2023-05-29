@@ -5,8 +5,6 @@ VisualStudioVersion = 17.2.32630.192
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SerialPortTest", "SerialPortTest\SerialPortTest.csproj", "{C3F23BA4-F4B3-4210-B5C3-34156178D69E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SimConnectTest", "SimConnectTest\SimConnectTest.csproj", "{009188B7-C22C-42A0-AD34-708E9C49502C}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Managed Data Request", "Managed Data Request\Managed Data Request.csproj", "{0BE55256-5C24-465C-958B-9F876CCA3194}"
 EndProject
 Global
@@ -19,10 +17,6 @@ Global
 		{C3F23BA4-F4B3-4210-B5C3-34156178D69E}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C3F23BA4-F4B3-4210-B5C3-34156178D69E}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C3F23BA4-F4B3-4210-B5C3-34156178D69E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{009188B7-C22C-42A0-AD34-708E9C49502C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{009188B7-C22C-42A0-AD34-708E9C49502C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{009188B7-C22C-42A0-AD34-708E9C49502C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{009188B7-C22C-42A0-AD34-708E9C49502C}.Release|Any CPU.Build.0 = Release|Any CPU
 		{0BE55256-5C24-465C-958B-9F876CCA3194}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{0BE55256-5C24-465C-958B-9F876CCA3194}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{0BE55256-5C24-465C-958B-9F876CCA3194}.Release|Any CPU.ActiveCfg = Release|Any CPU

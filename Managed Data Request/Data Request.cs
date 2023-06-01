@@ -34,11 +34,13 @@ namespace Managed_Data_Request
         enum DEFINITIONS
         {
             SixPack,
+            MakerFaire,
         }
 
         enum DATA_REQUESTS
         {
             REQUEST_1,
+            REQUEST_2,
         };
 
         // this is how you declare a data structure so that
@@ -58,11 +60,23 @@ namespace Managed_Data_Request
             public int turn_coodinator;
         };
 
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
+        struct MakerFaire
+        {
+            // this is how you declare a fixed size string
+            // [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+            // public String title;
+            public int airspeed_indicated;
+            public int altimeter;
+            public int vertical_speed;
+            public int rpm;
+        };
+
         public Form1()
         {
             InitializeComponent();
 
-            setButtons(true, false, false);
+            setButtons(true, false, false, false);
         }
         // Simconnect client will send a win32 message when there is 
         // a packet to process. ReceiveMessage must be called to
@@ -83,10 +97,11 @@ namespace Managed_Data_Request
             }
         }
 
-        private void setButtons(bool bConnect, bool bGet, bool bDisconnect)
+        private void setButtons(bool bConnect, bool bGetSixPack, bool bGetMakerFaire, bool bDisconnect)
         {
             buttonConnect.Enabled = bConnect;
-            buttonRequestData.Enabled = bGet;
+            buttonRequestSixPackData.Enabled = bGetSixPack;
+            buttonRequestMakeFaireData.Enabled = bGetMakerFaire;
             buttonDisconnect.Enabled = bDisconnect;
         }
 
@@ -122,9 +137,15 @@ namespace Managed_Data_Request
                 simconnect.AddToDataDefinition(DEFINITIONS.SixPack, "HEADING INDICATOR", "radians", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
                 simconnect.AddToDataDefinition(DEFINITIONS.SixPack, "TURN COORDINATOR BALL", "position 128", SIMCONNECT_DATATYPE.INT32, 0.0f, SimConnect.SIMCONNECT_UNUSED);
 
+                simconnect.AddToDataDefinition(DEFINITIONS.MakerFaire, "AIRSPEED INDICATED", "knots", SIMCONNECT_DATATYPE.INT32, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.MakerFaire, "PLANE ALTITUDE", "feet", SIMCONNECT_DATATYPE.INT32, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.MakerFaire, "VERTICAL SPEED", "feet per second", SIMCONNECT_DATATYPE.INT32, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.MakerFaire, "GENERAL ENG RPM:1", "rpm", SIMCONNECT_DATATYPE.INT32, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+
                 // IMPORTANT: register it with the simconnect managed wrapper marshaller
                 // if you skip this step, you will only receive a uint in the .dwData field.
                 simconnect.RegisterDataDefineStruct<SixPack>(DEFINITIONS.SixPack);
+                simconnect.RegisterDataDefineStruct<MakerFaire>(DEFINITIONS.MakerFaire);
 
                 // catch a simobject data request
                 simconnect.OnRecvSimobjectData += new SimConnect.RecvSimobjectDataEventHandler(simconnect_OnRecvSimobjectData);
@@ -176,6 +197,16 @@ namespace Managed_Data_Request
                     displayText(display);
                     break;
 
+                case DATA_REQUESTS.REQUEST_2:
+                    MakerFaire s2 = (MakerFaire)data.dwData[0];
+                    string display_makerfaire;
+                    display_makerfaire = "Airspeed [knots]: " + s2.airspeed_indicated;
+                    display_makerfaire += "\nAltimeter [feet]:      " + s2.altimeter;
+                    display_makerfaire += "\nVertical speed [ft/min]: " + s2.vertical_speed * 60;
+                    display_makerfaire += "\nRPM [rpm]: " + s2.rpm;
+                    displayText(display_makerfaire);
+                    break;
+
                 default:
                     displayText("Unknown request ID: " + data.dwRequestID);
                     break;
@@ -191,7 +222,7 @@ namespace Managed_Data_Request
                     // the constructor is similar to SimConnect_Open in the native API
                     simconnect = new SimConnect("Managed Data Request", this.Handle, WM_USER_SIMCONNECT, null, 0);
 
-                    setButtons(false, true, true);
+                    setButtons(false, true, true, true);
 
                     initDataRequest();
 
@@ -206,31 +237,51 @@ namespace Managed_Data_Request
                 displayText("Error - try again");
                 closeConnection();
 
-                setButtons(true, false, false);
+                setButtons(true, false, false, false);
             }
         }
 
         private void buttonDisconnect_Click(object sender, EventArgs e)
         {
             closeConnection();
-            setButtons(true, false, false);
+            setButtons(true, false, false, false);
         }
 
-        private void buttonRequestData_Click(object sender, EventArgs e)
+        private void buttonRequestSixPackData_Click(object sender, EventArgs e)
         {
-            if (buttonRequestData.Text == "Request User Aircraft Data")
+            if (buttonRequestSixPackData.Text == "Request Aircraft SixPack Data")
             {
+                setButtons(false, true, false, true);
                 simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_1, DEFINITIONS.SixPack, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.VISUAL_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
-                buttonRequestData.Text = "Stop request";
+                buttonRequestSixPackData.Text = "Stop request";
                 displayText("Request sent...");
             }
             else
             {
+                setButtons(false, true, true, true);
                 simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_1, DEFINITIONS.SixPack, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.VISUAL_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, int.MaxValue, 0);
-                buttonRequestData.Text = "Request User Aircraft Data";
+                buttonRequestSixPackData.Text = "Request Aircraft SixPack Data";
                 displayText("Request stopped...");
             }
-            
+        }
+
+        private void buttonRequestMakeFaireData_Click(object sender, EventArgs e)
+        {
+            if (buttonRequestMakeFaireData.Text == "Request Aircraft MakerFaire Data")
+            {
+                setButtons(false, false, true, true);
+                simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_2, DEFINITIONS.MakerFaire, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.VISUAL_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
+                buttonRequestMakeFaireData.Text = "Stop request";
+                displayText("Request sent...");
+            }
+            else
+            {
+                setButtons(false, true, true, true);
+                simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_2, DEFINITIONS.MakerFaire, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.VISUAL_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, int.MaxValue, 0);
+                buttonRequestMakeFaireData.Text = "Request Aircraft MakerFaire Data";
+                displayText("Request stopped...");
+            }
+
         }
 
         // Response number

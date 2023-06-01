@@ -30,9 +30,10 @@ namespace Managed_Data_Request
         {
             this.buttonConnect = new System.Windows.Forms.Button();
             this.buttonDisconnect = new System.Windows.Forms.Button();
-            this.buttonRequestData = new System.Windows.Forms.Button();
+            this.buttonRequestSixPackData = new System.Windows.Forms.Button();
             this.richResponse = new System.Windows.Forms.RichTextBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.buttonRequestMakeFaireData = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // buttonConnect
@@ -55,15 +56,15 @@ namespace Managed_Data_Request
             this.buttonDisconnect.UseVisualStyleBackColor = true;
             this.buttonDisconnect.Click += new System.EventHandler(this.buttonDisconnect_Click);
             // 
-            // buttonRequestData
+            // buttonRequestSixPackData
             // 
-            this.buttonRequestData.Location = new System.Drawing.Point(12, 96);
-            this.buttonRequestData.Name = "buttonRequestData";
-            this.buttonRequestData.Size = new System.Drawing.Size(131, 41);
-            this.buttonRequestData.TabIndex = 2;
-            this.buttonRequestData.Text = "Request User Aircraft Data";
-            this.buttonRequestData.UseVisualStyleBackColor = true;
-            this.buttonRequestData.Click += new System.EventHandler(this.buttonRequestData_Click);
+            this.buttonRequestSixPackData.Location = new System.Drawing.Point(12, 74);
+            this.buttonRequestSixPackData.Name = "buttonRequestSixPackData";
+            this.buttonRequestSixPackData.Size = new System.Drawing.Size(131, 41);
+            this.buttonRequestSixPackData.TabIndex = 2;
+            this.buttonRequestSixPackData.Text = "Request Aircraft SixPack Data";
+            this.buttonRequestSixPackData.UseVisualStyleBackColor = true;
+            this.buttonRequestSixPackData.Click += new System.EventHandler(this.buttonRequestSixPackData_Click);
             // 
             // richResponse
             // 
@@ -79,18 +80,29 @@ namespace Managed_Data_Request
             this.label1.AutoSize = true;
             this.label1.Location = new System.Drawing.Point(149, 21);
             this.label1.Name = "label1";
-            this.label1.Size = new System.Drawing.Size(60, 13);
+            this.label1.Size = new System.Drawing.Size(90, 20);
             this.label1.TabIndex = 4;
             this.label1.Text = "Responses";
+            // 
+            // buttonRequestMakeFaireData
+            // 
+            this.buttonRequestMakeFaireData.Location = new System.Drawing.Point(12, 121);
+            this.buttonRequestMakeFaireData.Name = "buttonRequestMakeFaireData";
+            this.buttonRequestMakeFaireData.Size = new System.Drawing.Size(131, 41);
+            this.buttonRequestMakeFaireData.TabIndex = 5;
+            this.buttonRequestMakeFaireData.Text = "Request Aircraft MakerFaire Data";
+            this.buttonRequestMakeFaireData.UseVisualStyleBackColor = true;
+            this.buttonRequestMakeFaireData.Click += new System.EventHandler(this.buttonRequestMakeFaireData_Click);
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(393, 211);
+            this.Controls.Add(this.buttonRequestMakeFaireData);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.richResponse);
-            this.Controls.Add(this.buttonRequestData);
+            this.Controls.Add(this.buttonRequestSixPackData);
             this.Controls.Add(this.buttonDisconnect);
             this.Controls.Add(this.buttonConnect);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
@@ -106,9 +118,10 @@ namespace Managed_Data_Request
 
         private System.Windows.Forms.Button buttonConnect;
         private System.Windows.Forms.Button buttonDisconnect;
-        private System.Windows.Forms.Button buttonRequestData;
+        private System.Windows.Forms.Button buttonRequestSixPackData;
         private System.Windows.Forms.RichTextBox richResponse;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Button buttonRequestMakeFaireData;
     }
 }
 

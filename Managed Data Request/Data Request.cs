@@ -122,7 +122,7 @@ namespace Managed_Data_Request
                 simconnect.RegisterDataDefineStruct<Struct1>(DEFINITIONS.Struct1);
 
                 // catch a simobject data request
-                simconnect.OnRecvSimobjectDataBytype += new SimConnect.RecvSimobjectDataBytypeEventHandler(simconnect_OnRecvSimobjectDataBytype);
+                simconnect.OnRecvSimobjectData += new SimConnect.RecvSimobjectDataEventHandler(simconnect_OnRecvSimobjectData);
             }
             catch (COMException ex)
             {
@@ -153,7 +153,7 @@ namespace Managed_Data_Request
             closeConnection();
         }
 
-        void simconnect_OnRecvSimobjectDataBytype(SimConnect sender, SIMCONNECT_RECV_SIMOBJECT_DATA_BYTYPE data)
+        void simconnect_OnRecvSimobjectData(SimConnect sender, SIMCONNECT_RECV_SIMOBJECT_DATA data)
         {
 
             switch ((DATA_REQUESTS)data.dwRequestID)
@@ -161,11 +161,11 @@ namespace Managed_Data_Request
                 case DATA_REQUESTS.REQUEST_1:
                     Struct1 s1 = (Struct1)data.dwData[0];
 
-                    displayText("Title:   " + s1.title);
-                    displayText("Lat:     " + s1.latitude);
-                    displayText("Lon:     " + s1.longitude);
-                    displayText("Alt:     " + s1.altitude);
-                    displayText("Airspeed:" + s1.airspeed_indicated * 1.150779);
+                    displayText("Title:           " + s1.title);
+                    displayText("Lat:             " + s1.latitude);
+                    displayText("Lon:             " + s1.longitude);
+                    displayText("Alt [feet]:      " + s1.altitude);
+                    displayText("Airspeed [knots]:" + s1.airspeed_indicated);
                     break;
 
                 default:
@@ -210,10 +210,7 @@ namespace Managed_Data_Request
 
         private void buttonRequestData_Click(object sender, EventArgs e)
         {
-            // The following call returns identical information to:
-            // simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_1, DEFINITIONS.Struct1, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.ONCE);
-             
-            simconnect.RequestDataOnSimObjectType(DATA_REQUESTS.REQUEST_1,DEFINITIONS.Struct1, 0, SIMCONNECT_SIMOBJECT_TYPE.USER);
+            simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_1, DEFINITIONS.Struct1, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.ONCE, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
             displayText("Request sent...");
         }
 

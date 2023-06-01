@@ -49,8 +49,6 @@ namespace Managed_Data_Request
             // this is how you declare a fixed size string
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
             public String title;
-            public double latitude;
-            public double longitude;
             public double altitude;
             public double airspeed_indicated;
         };
@@ -112,8 +110,6 @@ namespace Managed_Data_Request
 
                 // define a data structure
                 simconnect.AddToDataDefinition(DEFINITIONS.Struct1, "Title", null, SIMCONNECT_DATATYPE.STRING256, 0.0f, SimConnect.SIMCONNECT_UNUSED);
-                simconnect.AddToDataDefinition(DEFINITIONS.Struct1, "Plane Latitude", "degrees", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
-                simconnect.AddToDataDefinition(DEFINITIONS.Struct1, "Plane Longitude", "degrees", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
                 simconnect.AddToDataDefinition(DEFINITIONS.Struct1, "Plane Altitude", "feet", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
                 simconnect.AddToDataDefinition(DEFINITIONS.Struct1, "AIRSPEED INDICATED", "knots", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
 
@@ -160,12 +156,11 @@ namespace Managed_Data_Request
             {
                 case DATA_REQUESTS.REQUEST_1:
                     Struct1 s1 = (Struct1)data.dwData[0];
-
-                    displayText("Title:           " + s1.title);
-                    displayText("Lat:             " + s1.latitude);
-                    displayText("Lon:             " + s1.longitude);
-                    displayText("Alt [feet]:      " + s1.altitude);
-                    displayText("Airspeed [knots]:" + s1.airspeed_indicated);
+                    string display;
+                    display = "Title:           " + s1.title;
+                    display += "\nAlt [feet]:      " + s1.altitude;
+                    display += "\nAirspeed [knots]:" + s1.airspeed_indicated;
+                    displayText(display);
                     break;
 
                 default:
@@ -210,8 +205,19 @@ namespace Managed_Data_Request
 
         private void buttonRequestData_Click(object sender, EventArgs e)
         {
-            simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_1, DEFINITIONS.Struct1, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.ONCE, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
-            displayText("Request sent...");
+            if (buttonRequestData.Text == "Request User Aircraft Data")
+            {
+                simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_1, DEFINITIONS.Struct1, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.VISUAL_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
+                buttonRequestData.Text = "Stop request";
+                displayText("Request sent...");
+            }
+            else
+            {
+                simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_1, DEFINITIONS.Struct1, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.VISUAL_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, int.MaxValue, 0);
+                buttonRequestData.Text = "Request User Aircraft Data";
+                displayText("Request stopped...");
+            }
+            
         }
 
         // Response number
@@ -223,10 +229,10 @@ namespace Managed_Data_Request
         void displayText(string s)
         {
             // remove first string from output
-            output = output.Substring(output.IndexOf("\n") + 1);
+            // output = output.Substring(output.IndexOf("\n") + 1);
 
             // add the new string
-            output += "\n" + response++ + ": " + s;
+            output = "Response #: " + response++ + "\n" + s;
 
             // display it
             richResponse.Text = output;

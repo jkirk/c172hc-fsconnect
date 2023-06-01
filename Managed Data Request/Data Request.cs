@@ -19,11 +19,13 @@ using System.Windows.Forms;
 // Add these two statements to all SimConnect clients
 using Microsoft.FlightSimulator.SimConnect;
 using System.Runtime.InteropServices;
+using System.IO.Ports;
 
 namespace Managed_Data_Request
 {
     public partial class Form1 : Form
     {
+        FsMaster _fsmaster;
 
         // User-defined win32 event
         const int WM_USER_SIMCONNECT = 0x0403;
@@ -75,13 +77,16 @@ namespace Managed_Data_Request
         public Form1()
         {
             InitializeComponent();
+            _fsmaster = new FsMaster();
+            _fsmaster.Start();
 
             setButtons(true, false, false, false);
+            setSerialPort();
         }
+
         // Simconnect client will send a win32 message when there is 
         // a packet to process. ReceiveMessage must be called to
         // trigger the events. This model keeps simconnect processing on the main thread.
-
         protected override void DefWndProc(ref Message m)
         {
             if (m.Msg == WM_USER_SIMCONNECT)
@@ -95,6 +100,15 @@ namespace Managed_Data_Request
             {
                 base.DefWndProc(ref m);
             }
+        }
+
+        private void setSerialPort()
+        {
+            cbComPort.DataSource = SerialPort.GetPortNames();
+            cbComPort.SelectedItem = cbComPort.FindStringExact(_fsmaster.GetPortName());
+
+            cbBaudRate.DataSource = new string[2] { "9600", "115200" };
+            cbBaudRate.SelectedItem = cbBaudRate.FindStringExact(_fsmaster.GetBaudRate().ToString());
         }
 
         private void setButtons(bool bConnect, bool bGetSixPack, bool bGetMakerFaire, bool bDisconnect)
@@ -176,6 +190,7 @@ namespace Managed_Data_Request
         // The case where the user closes the client
         private void Form1_FormClosed(object sender, FormClosedEventArgs e)
         {
+            _fsmaster.Stop();
             closeConnection();
         }
 

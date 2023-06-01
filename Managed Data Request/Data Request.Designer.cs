@@ -34,6 +34,10 @@ namespace Managed_Data_Request
             this.richResponse = new System.Windows.Forms.RichTextBox();
             this.label1 = new System.Windows.Forms.Label();
             this.buttonRequestMakeFaireData = new System.Windows.Forms.Button();
+            this.cbComPort = new System.Windows.Forms.ComboBox();
+            this.labelCOMPort = new System.Windows.Forms.Label();
+            this.labelBaudRate = new System.Windows.Forms.Label();
+            this.cbBaudRate = new System.Windows.Forms.ComboBox();
             this.SuspendLayout();
             // 
             // buttonConnect
@@ -71,7 +75,7 @@ namespace Managed_Data_Request
             this.richResponse.Location = new System.Drawing.Point(149, 40);
             this.richResponse.Name = "richResponse";
             this.richResponse.ReadOnly = true;
-            this.richResponse.Size = new System.Drawing.Size(221, 151);
+            this.richResponse.Size = new System.Drawing.Size(410, 151);
             this.richResponse.TabIndex = 3;
             this.richResponse.Text = "";
             // 
@@ -94,11 +98,51 @@ namespace Managed_Data_Request
             this.buttonRequestMakeFaireData.UseVisualStyleBackColor = true;
             this.buttonRequestMakeFaireData.Click += new System.EventHandler(this.buttonRequestMakeFaireData_Click);
             // 
+            // cbComPort
+            // 
+            this.cbComPort.FormattingEnabled = true;
+            this.cbComPort.Location = new System.Drawing.Point(438, 197);
+            this.cbComPort.Name = "cbComPort";
+            this.cbComPort.Size = new System.Drawing.Size(121, 21);
+            this.cbComPort.TabIndex = 6;
+            // 
+            // labelCOMPort
+            // 
+            this.labelCOMPort.AccessibleRole = System.Windows.Forms.AccessibleRole.Pane;
+            this.labelCOMPort.AutoSize = true;
+            this.labelCOMPort.Location = new System.Drawing.Point(149, 197);
+            this.labelCOMPort.Name = "labelCOMPort";
+            this.labelCOMPort.Size = new System.Drawing.Size(86, 20);
+            this.labelCOMPort.TabIndex = 7;
+            this.labelCOMPort.Text = "COM Ports";
+            // 
+            // labelBaudRate
+            // 
+            this.labelBaudRate.AccessibleRole = System.Windows.Forms.AccessibleRole.Pane;
+            this.labelBaudRate.AutoSize = true;
+            this.labelBaudRate.Location = new System.Drawing.Point(149, 232);
+            this.labelBaudRate.Name = "labelBaudRate";
+            this.labelBaudRate.Size = new System.Drawing.Size(86, 20);
+            this.labelBaudRate.TabIndex = 8;
+            this.labelBaudRate.Text = "Baud Rate";
+            // 
+            // cbBaudRate
+            // 
+            this.cbBaudRate.FormattingEnabled = true;
+            this.cbBaudRate.Location = new System.Drawing.Point(438, 234);
+            this.cbBaudRate.Name = "cbBaudRate";
+            this.cbBaudRate.Size = new System.Drawing.Size(121, 21);
+            this.cbBaudRate.TabIndex = 9;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(393, 211);
+            this.ClientSize = new System.Drawing.Size(571, 488);
+            this.Controls.Add(this.cbBaudRate);
+            this.Controls.Add(this.labelBaudRate);
+            this.Controls.Add(this.labelCOMPort);
+            this.Controls.Add(this.cbComPort);
             this.Controls.Add(this.buttonRequestMakeFaireData);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.richResponse);
@@ -107,7 +151,7 @@ namespace Managed_Data_Request
             this.Controls.Add(this.buttonConnect);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedToolWindow;
             this.Name = "Form1";
-            this.Text = "  SimConnect Managed Data Request";
+            this.Text = "c172hc-fsconnect";
             this.FormClosed += new System.Windows.Forms.FormClosedEventHandler(this.Form1_FormClosed);
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -122,6 +166,10 @@ namespace Managed_Data_Request
         private System.Windows.Forms.RichTextBox richResponse;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Button buttonRequestMakeFaireData;
+        private System.Windows.Forms.ComboBox cbComPort;
+        private System.Windows.Forms.Label labelCOMPort;
+        private System.Windows.Forms.Label labelBaudRate;
+        private System.Windows.Forms.ComboBox cbBaudRate;
     }
 }
 

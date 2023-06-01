@@ -26,6 +26,7 @@ namespace Managed_Data_Request
     public partial class Form1 : Form
     {
         FsMaster _fsmaster;
+        MakerFaire _maker_faire;
 
         // User-defined win32 event
         const int WM_USER_SIMCONNECT = 0x0403;
@@ -213,12 +214,12 @@ namespace Managed_Data_Request
                     break;
 
                 case DATA_REQUESTS.REQUEST_2:
-                    MakerFaire s2 = (MakerFaire)data.dwData[0];
+                    _maker_faire = (MakerFaire)data.dwData[0];
                     string display_makerfaire;
-                    display_makerfaire = "Airspeed [knots]: " + s2.airspeed_indicated;
-                    display_makerfaire += "\nAltimeter [feet]:      " + s2.altimeter;
-                    display_makerfaire += "\nVertical speed [ft/min]: " + s2.vertical_speed * 60;
-                    display_makerfaire += "\nRPM [rpm]: " + s2.rpm;
+                    display_makerfaire = "Airspeed [knots]: " + _maker_faire.airspeed_indicated;
+                    display_makerfaire += "\nAltimeter [feet]:      " + _maker_faire.altimeter;
+                    display_makerfaire += "\nVertical speed [ft/min]: " + _maker_faire.vertical_speed * 60;
+                    display_makerfaire += "\nRPM [rpm]: " + _maker_faire.rpm;
                     displayText(display_makerfaire);
                     break;
 
@@ -315,6 +316,14 @@ namespace Managed_Data_Request
 
             // display it
             richResponse.Text = output;
+        }
+
+        private void buttonSendSingleMessageBlock_Click(object sender, EventArgs e)
+        {
+            _fsmaster.SendMessage(0x21, _maker_faire.airspeed_indicated);
+            _fsmaster.SendMessage(0x23, _maker_faire.altimeter);
+            _fsmaster.SendMessage(0x24, _maker_faire.vertical_speed * 60);
+            _fsmaster.SendMessage(0x27, _maker_faire.rpm);
         }
     }
 }

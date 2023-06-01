@@ -38,6 +38,7 @@ namespace Managed_Data_Request
             this.labelCOMPort = new System.Windows.Forms.Label();
             this.labelBaudRate = new System.Windows.Forms.Label();
             this.cbBaudRate = new System.Windows.Forms.ComboBox();
+            this.buttonSendSingleMessageBlock = new System.Windows.Forms.Button();
             this.SuspendLayout();
             // 
             // buttonConnect
@@ -134,11 +135,22 @@ namespace Managed_Data_Request
             this.cbBaudRate.Size = new System.Drawing.Size(121, 21);
             this.cbBaudRate.TabIndex = 9;
             // 
+            // buttonSendSingleMessageBlock
+            // 
+            this.buttonSendSingleMessageBlock.Location = new System.Drawing.Point(149, 267);
+            this.buttonSendSingleMessageBlock.Name = "buttonSendSingleMessageBlock";
+            this.buttonSendSingleMessageBlock.Size = new System.Drawing.Size(410, 41);
+            this.buttonSendSingleMessageBlock.TabIndex = 10;
+            this.buttonSendSingleMessageBlock.Text = "Send single message block to fsmaster";
+            this.buttonSendSingleMessageBlock.UseVisualStyleBackColor = true;
+            this.buttonSendSingleMessageBlock.Click += new System.EventHandler(this.buttonSendSingleMessageBlock_Click);
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(571, 488);
+            this.ClientSize = new System.Drawing.Size(571, 322);
+            this.Controls.Add(this.buttonSendSingleMessageBlock);
             this.Controls.Add(this.cbBaudRate);
             this.Controls.Add(this.labelBaudRate);
             this.Controls.Add(this.labelCOMPort);
@@ -170,6 +182,7 @@ namespace Managed_Data_Request
         private System.Windows.Forms.Label labelCOMPort;
         private System.Windows.Forms.Label labelBaudRate;
         private System.Windows.Forms.ComboBox cbBaudRate;
+        private System.Windows.Forms.Button buttonSendSingleMessageBlock;
     }
 }
 

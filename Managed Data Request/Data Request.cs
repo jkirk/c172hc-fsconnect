@@ -33,7 +33,7 @@ namespace Managed_Data_Request
 
         enum DEFINITIONS
         {
-            Struct1,
+            SixPack,
         }
 
         enum DATA_REQUESTS
@@ -44,13 +44,18 @@ namespace Managed_Data_Request
         // this is how you declare a data structure so that
         // simconnect knows how to fill it/read it.
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi, Pack = 1)]
-        struct Struct1
+        struct SixPack
         {
             // this is how you declare a fixed size string
-            [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
-            public String title;
-            public double altitude;
+            // [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)]
+            // public String title;
             public double airspeed_indicated;
+            public double attitude_pitch;
+            public double attitude_bank;
+            public double altimeter;
+            public double vertical_speed;
+            public double heading;
+            public int turn_coodinator;
         };
 
         public Form1()
@@ -109,13 +114,17 @@ namespace Managed_Data_Request
                 simconnect.OnRecvException += new SimConnect.RecvExceptionEventHandler(simconnect_OnRecvException);
 
                 // define a data structure
-                simconnect.AddToDataDefinition(DEFINITIONS.Struct1, "Title", null, SIMCONNECT_DATATYPE.STRING256, 0.0f, SimConnect.SIMCONNECT_UNUSED);
-                simconnect.AddToDataDefinition(DEFINITIONS.Struct1, "Plane Altitude", "feet", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
-                simconnect.AddToDataDefinition(DEFINITIONS.Struct1, "AIRSPEED INDICATED", "knots", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.SixPack, "AIRSPEED INDICATED", "knots", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.SixPack, "ATTITUDE INDICATOR PITCH DEGREES", "radians", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.SixPack, "ATTITUDE INDICATOR BANK DEGREES", "radians", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.SixPack, "PLANE ALTITUDE", "feet", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.SixPack, "VERTICAL SPEED", "feet per second", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.SixPack, "HEADING INDICATOR", "radians", SIMCONNECT_DATATYPE.FLOAT64, 0.0f, SimConnect.SIMCONNECT_UNUSED);
+                simconnect.AddToDataDefinition(DEFINITIONS.SixPack, "TURN COORDINATOR BALL", "position 128", SIMCONNECT_DATATYPE.INT32, 0.0f, SimConnect.SIMCONNECT_UNUSED);
 
                 // IMPORTANT: register it with the simconnect managed wrapper marshaller
                 // if you skip this step, you will only receive a uint in the .dwData field.
-                simconnect.RegisterDataDefineStruct<Struct1>(DEFINITIONS.Struct1);
+                simconnect.RegisterDataDefineStruct<SixPack>(DEFINITIONS.SixPack);
 
                 // catch a simobject data request
                 simconnect.OnRecvSimobjectData += new SimConnect.RecvSimobjectDataEventHandler(simconnect_OnRecvSimobjectData);
@@ -155,11 +164,15 @@ namespace Managed_Data_Request
             switch ((DATA_REQUESTS)data.dwRequestID)
             {
                 case DATA_REQUESTS.REQUEST_1:
-                    Struct1 s1 = (Struct1)data.dwData[0];
+                    SixPack s1 = (SixPack)data.dwData[0];
                     string display;
-                    display = "Title:           " + s1.title;
-                    display += "\nAlt [feet]:      " + s1.altitude;
-                    display += "\nAirspeed [knots]:" + s1.airspeed_indicated;
+                    display = "Airspeed [knots]: " + s1.airspeed_indicated;
+                    display += "\nAttitude pitch [radians]: " + s1.attitude_pitch;
+                    display += "\nAttitude bank [radians]: " + s1.attitude_bank;
+                    display += "\nAltimeter [feet]:      " + s1.altimeter;
+                    display += "\nVertical speed [ft/s]: " + s1.vertical_speed;
+                    display += "\nHeading [radians]: " + s1.heading;
+                    display += "\nTurn coordinator [pos]: " + s1.turn_coodinator;
                     displayText(display);
                     break;
 
@@ -207,13 +220,13 @@ namespace Managed_Data_Request
         {
             if (buttonRequestData.Text == "Request User Aircraft Data")
             {
-                simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_1, DEFINITIONS.Struct1, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.VISUAL_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
+                simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_1, DEFINITIONS.SixPack, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.VISUAL_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, 0, 0);
                 buttonRequestData.Text = "Stop request";
                 displayText("Request sent...");
             }
             else
             {
-                simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_1, DEFINITIONS.Struct1, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.VISUAL_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, int.MaxValue, 0);
+                simconnect.RequestDataOnSimObject(DATA_REQUESTS.REQUEST_1, DEFINITIONS.SixPack, SimConnect.SIMCONNECT_OBJECT_ID_USER, SIMCONNECT_PERIOD.VISUAL_FRAME, SIMCONNECT_DATA_REQUEST_FLAG.CHANGED, 0, int.MaxValue, 0);
                 buttonRequestData.Text = "Request User Aircraft Data";
                 displayText("Request stopped...");
             }

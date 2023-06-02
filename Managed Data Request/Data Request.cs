@@ -80,8 +80,14 @@ namespace Managed_Data_Request
             InitializeComponent();
             _fsmaster = new FsMaster();
             _fsmaster.Start();
-
+            _fsmaster.SerialPortChanged += OnSerialPortChanged;
             setButtons(true, false, false, false);
+            UpdateComboBoxBaudRate(new string[2] { "9600", "115200" });
+            buttonSendSingleMessageBlock.Enabled = false;
+        }
+
+        private void OnSerialPortChanged(object source, EventArgs e)
+        {
             setSerialPort();
         }
 
@@ -103,13 +109,50 @@ namespace Managed_Data_Request
             }
         }
 
+        private void UpdateComboBoxComPort(string portName, string[] ports)
+        {
+            if (cbComPort.InvokeRequired)
+            {
+                cbComPort.Invoke(new Action<string, string[]>(UpdateComboBoxComPort), new object[] { portName, ports });
+            }
+            else
+            {
+                cbComPort.Items.Clear();
+                cbComPort.Items.AddRange(ports);
+                cbComPort.SelectedIndex = cbComPort.FindStringExact(portName);
+            }
+        }
+
+        private void UpdateComboBoxBaudRate(string[] baudRates)
+        {
+            if (cbBaudRate.InvokeRequired)
+            {
+                cbBaudRate.Invoke(new Action<string[]>(UpdateComboBoxBaudRate), new object[] { baudRates });
+            }
+            else
+            {
+                cbBaudRate.Items.Clear();
+                cbBaudRate.Items.AddRange(baudRates);
+                cbBaudRate.SelectedIndex = 0;
+            }
+        }
+
+        private void UpdateButtonSendSendSingleMessage(bool bEnable)
+        {
+            if (buttonSendSingleMessageBlock.InvokeRequired)
+            {
+                buttonSendSingleMessageBlock.Invoke(new Action<bool>(UpdateButtonSendSendSingleMessage), new object[] { bEnable });
+            }
+            else
+            {
+                buttonSendSingleMessageBlock.Enabled = bEnable;
+            }
+        }
+
         private void setSerialPort()
         {
-            cbComPort.DataSource = SerialPort.GetPortNames();
-            cbComPort.SelectedItem = cbComPort.FindStringExact(_fsmaster.GetPortName());
-
-            cbBaudRate.DataSource = new string[2] { "9600", "115200" };
-            cbBaudRate.SelectedItem = cbBaudRate.FindStringExact(_fsmaster.GetBaudRate().ToString());
+            UpdateButtonSendSendSingleMessage(SerialPort.GetPortNames().Length > 0);
+            UpdateComboBoxComPort(_fsmaster.GetPortName(), SerialPort.GetPortNames());
         }
 
         private void setButtons(bool bConnect, bool bGetSixPack, bool bGetMakerFaire, bool bDisconnect)
@@ -320,6 +363,8 @@ namespace Managed_Data_Request
 
         private void buttonSendSingleMessageBlock_Click(object sender, EventArgs e)
         {
+            _fsmaster.SetPortName(cbComPort.Text);
+            _fsmaster.SetBaudRate(cbBaudRate.Text);
             _fsmaster.SendMessage(0x21, _maker_faire.airspeed_indicated);
             _fsmaster.SendMessage(0x23, _maker_faire.altimeter);
             _fsmaster.SendMessage(0x24, _maker_faire.vertical_speed * 60);

@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO.Ports;
 using System.Linq;
-using System.Text;
+using System.Runtime.CompilerServices;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Managed_Data_Request
 {
@@ -14,10 +12,15 @@ namespace Managed_Data_Request
         Thread _detectSerialPortsThread;
         bool _continueDetectSerialPortsThread = false;
         int _serialPortCount = 0;
-        string _defaultPortName = "COM1";
 
-        public static bool _serialPortsExists = false;
         public static bool _serialPortIsConnected = false;
+
+        public delegate void SerialPortChangedHandler(object source, EventArgs e);
+        public event SerialPortChangedHandler SerialPortChanged;
+        protected virtual void OnSerialPortChanged()
+        {
+            SerialPortChanged?.Invoke(this, null);
+        }
 
         public void Start()
         {
@@ -46,29 +49,38 @@ namespace Managed_Data_Request
             while (_continueDetectSerialPortsThread)
             {
                 string[] ports = SerialPort.GetPortNames();
+
                 if (_serialPortCount < ports.Length && ports.Length > 0)
                 {
+                    // First run or a new serial port has been detected.
+                    // The serial port should only be set when the first port is detected.
+                    // By default, select the highest serial port number.
+
                     _serialPortCount = ports.Length;
-                    _defaultPortName = ports[ports.Length - 1];
-                    _serialPort.PortName = _defaultPortName;
-                    _serialPortsExists = true;
-                    _serialPort.Open();
+                    if (!ports.Contains(_serialPort.PortName))
+                    {
+                        _serialPort.Close();
+                        _serialPort.PortName = ports[ports.Length - 1];
+                        _serialPort.Open();   
+                    }
+                    OnSerialPortChanged();
                 }
                 else if (_serialPortCount > ports.Length)
                 {
+                    // One or more serial ports have been removed
+                    // If a serial port remains and the serial port in use has been removed, switch to the next highest available port.
                     _serialPortCount = ports.Length;
-                    if (ports.Length > 0)
+                    if (ports.Length > 0 && !ports.Contains(_serialPort.PortName))
                     {
-                        _defaultPortName = ports[ports.Length - 1];
-                        _serialPort.PortName = _defaultPortName;
-                        _serialPortsExists = true;
+                        _serialPort.Close();
+                        _serialPort.PortName = ports[ports.Length - 1];
                         _serialPort.Open();
                     }
                     else
                     {
                         _serialPort.Close();
-                        _serialPortsExists = false;
                     }
+                    OnSerialPortChanged();
                 }
                 Thread.Sleep(1000);
             }
@@ -80,10 +92,43 @@ namespace Managed_Data_Request
             return _serialPort.PortName;
         }
 
+        public void SetPortName(string portName)
+        {
+            bool portOpen = _serialPort.IsOpen;
+            if (portName == _serialPort.PortName)
+            {
+                return;
+            }
+
+            _serialPort.Close();
+            _serialPort.PortName = portName;
+            if (portOpen)
+            {
+                _serialPort.Open();
+            }
+        }
+
         // Get current baud rate
         public int GetBaudRate()
         {
             return _serialPort.BaudRate;
+        }
+
+        public void SetBaudRate(string strBaudRate)
+        {
+            bool portOpen = _serialPort.IsOpen;
+            int baudRate = int.Parse(strBaudRate);
+            if (baudRate == _serialPort.BaudRate)
+            {
+                return;
+            }
+            
+            _serialPort.Close();
+            _serialPort.BaudRate = baudRate;
+            if (portOpen)
+            {
+                _serialPort.Open();
+            }
         }
 
         public bool SendMessage(int gauge_code, int gauge_value)

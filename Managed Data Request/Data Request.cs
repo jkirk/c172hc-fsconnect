@@ -78,12 +78,12 @@ namespace Managed_Data_Request
         public Form1()
         {
             InitializeComponent();
-            _fsmaster = new FsMaster();
-            _fsmaster.Start();
-            _fsmaster.SerialPortChanged += OnSerialPortChanged;
             setButtons(true, false, false, false);
             UpdateComboBoxBaudRate(new string[2] { "9600", "115200" });
             buttonSendSingleMessageBlock.Enabled = false;
+            _fsmaster = new FsMaster();
+            _fsmaster.Start();
+            _fsmaster.SerialPortChanged += OnSerialPortChanged;
         }
 
         private void OnSerialPortChanged(object source, EventArgs e)

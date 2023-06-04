@@ -61,7 +61,6 @@ namespace Managed_Data_Request
                     {
                         _serialPort.Close();
                         _serialPort.PortName = ports[ports.Length - 1];
-                        _serialPort.Open();   
                     }
                     OnSerialPortChanged();
                 }
@@ -74,7 +73,6 @@ namespace Managed_Data_Request
                     {
                         _serialPort.Close();
                         _serialPort.PortName = ports[ports.Length - 1];
-                        _serialPort.Open();
                     }
                     else
                     {
@@ -122,7 +120,7 @@ namespace Managed_Data_Request
             {
                 return;
             }
-            
+
             _serialPort.Close();
             _serialPort.BaudRate = baudRate;
             if (portOpen)
@@ -130,10 +128,13 @@ namespace Managed_Data_Request
                 _serialPort.Open();
             }
         }
-
+        
         public bool SendMessage(int gauge_code, int gauge_value)
         {
-            if (!_serialPort.IsOpen) return false;
+            if (!_serialPort.IsOpen)
+            {
+                _serialPort.Open();
+            }
             try
             {
                 byte[] msg = GenerateMessage(ValueToGaugeCode(gauge_code), ValueToGaugeValue(gauge_value));
